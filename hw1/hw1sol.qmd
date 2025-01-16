@@ -28,29 +28,29 @@ sessionInfo()
 
 1. Apply for the [Student Developer Pack](https://education.github.com/pack) at GitHub using your UCLA email. You'll get GitHub Pro account for free (unlimited public and private repositories).
 
-**Solution** Done.
+**Solution:** Done.
 
 2. Create a **private** repository `biostat-203b-2025-winter` and add `Hua-Zhou` and TA team (`Tomoki-Okuno` for Lec 1; `parsajamshidian` and `BowenZhang2001` for Lec 82) as your collaborators with write permission.
 
-**Solution** Done.
+**Solution:** Done.
 
 3. Top directories of the repository should be `hw1`, `hw2`, ... Maintain two branches `main` and `develop`. The `develop` branch will be your main playground, the place where you develop solution (code) to homework problems and write up report. The `main` branch will be your presentation area. Submit your homework files (Quarto file `qmd`, `html` file converted by Quarto, all code and extra data sets to reproduce results) in the `main` branch.
 
-**Solution** Develop branch created.
+**Solution:** Develop branch created.
 
 4. After each homework due date, course reader and instructor will check out your `main` branch for grading. Tag each of your homework submissions with tag names `hw1`, `hw2`, ... Tagging time will be used as your submission time. That means if you tag your `hw1` submission after deadline, penalty points will be deducted for late submission.
 
-**Solution** ok.
+**Solution:** ok.
 
 5. After this course, you can make this repository public and use it to demonstrate your skill sets on job market.
 
-**Solution** cool.
+**Solution:** cool.
 
 ## Q2. Data ethics training
 
 This exercise (and later in this course) uses the [MIMIC-IV data v3.1](https://physionet.org/content/mimiciv/3.1/), a freely accessible critical care database developed by the MIT Lab for Computational Physiology. Follow the instructions at <https://mimic.mit.edu/docs/gettingstarted/> to (1) complete the CITI `Data or Specimens Only Research` course and (2) obtain the PhysioNet credential for using the MIMIC-IV data. Display the verification links to your completion report and completion certificate here. **You must complete Q2 before working on the remaining questions.** (Hint: The CITI training takes a few hours and the PhysioNet credentialing takes a couple days; do not leave it to the last minute.)
 
-**Solution** Here is the [link](https://www.citiprogram.org/verify/?k6514b1a2-bbfb-4067-b2ad-a177851ab712-67221985) to my Completion report, and [link](https://www.citiprogram.org/verify/?w699dc996-abef-45ec-baea-547391316b53-67221985) to my Completion Certificate.
+**Solution:** Here is the [link](https://www.citiprogram.org/verify/?k6514b1a2-bbfb-4067-b2ad-a177851ab712-67221985) to my Completion report, and [link](https://www.citiprogram.org/verify/?w699dc996-abef-45ec-baea-547391316b53-67221985) to my Completion Certificate.
 
 ## Q3. Linux Shell Commands
 
@@ -62,13 +62,13 @@ ls -l ~/mimic/
 ```
 Refer to the documentation <https://physionet.org/content/mimiciv/3.1/> for details of data files. Do **not** put these data files into Git; they are big. Do **not** copy them into your directory. Do **not** decompress the gz data files. These create unnecessary big files and are not big-data-friendly practices. Read from the data folder `~/mimic` directly in following exercises. 
 
-**Solution** I downloaded MIMIC v3.1 to my pc and made it available at `~/mimic/` .
+**Solution:** I downloaded MIMIC v3.1 to my pc and made it available at `~/mimic/` .
 
   Use Bash commands to answer following questions.
 
 2. Display the contents in the folders `hosp` and `icu` using Bash command `ls -l`. Why are these data files distributed as `.csv.gz` files instead of `.csv` (comma separated values) files? Read the page <https://mimic.mit.edu/docs/iv/> to understand what's in each folder.
 
-**Solution** MIMIC-IV containing tons of real hospital stays for patients admitted, `.csv.gz` is more friendly dealing with big data, which can reduce file size, etc. 
+**Solution:** MIMIC-IV containing tons of real hospital stays for patients admitted, `.csv.gz` is more friendly dealing with big data, which can reduce file size, etc. 
 ```{bash}
 ls -l ~/mimic/hosp/
 ls -l ~/mimic/icu/
@@ -76,8 +76,11 @@ ls -l ~/mimic/icu/
 
 3. Briefly describe what Bash commands `zcat`, `zless`, `zmore`, and `zgrep` do.
 
-**Solution**
-
+**Solution:** I tried to run all commands like `zless ~/mimic/hosp/admissions.csv.gz`, it takes long time to process but still can not generate the output. `zcat` is used to display the content of `.csv.gz` compressed files without uncompressing files permanently. `zless` is used to view the content of a compressed file in scrolling way. `zmore`also displaying the compressed file content page by page. `zgrep` can search a specific word in the compressed file.
+```{bash}
+ls ~/mimic/hosp/admissions.csv.gz
+zcat ~/mimic/hosp/admissions.csv.gz
+```
 4. (Looping in Bash) What's the output of the following bash script?
 ```{bash}
 #| eval: false
@@ -88,23 +91,29 @@ done
 ```
 Display the number of lines in each data file using a similar loop. (Hint: combine linux commands `zcat <` and `wc -l`.)
 
-**Solution**
-
+**Solution:**
+```{bash}
+#| eval: false
+for datafile in ~/mimic/hosp/{a,l,pa}*.gz
+do
+  ls -l $datafile
+done
+```
 5. Display the first few lines of `admissions.csv.gz`. How many rows are in this data file, excluding the header line? Each `hadm_id` identifies a hospitalization. How many hospitalizations are in this data file? How many unique patients (identified by `subject_id`) are in this data file? Do they match the number of patients listed in the `patients.csv.gz` file? (Hint: combine Linux commands `zcat <`, `head`/`tail`, `awk`, `sort`, `uniq`, `wc`, and so on.)
 
-**Solution**
+**Solution:**
 
 6. What are the possible values taken by each of the variable `admission_type`, `admission_location`, `insurance`, and `ethnicity`? Also report the count for each unique value of these variables in decreasing order. (Hint: combine Linux commands `zcat`, `head`/`tail`, `awk`, `uniq -c`, `wc`, `sort`, and so on; skip the header line.)
 
-**Solution**
+**Solution:**
 
 7. The `icusays.csv.gz` file contains all the ICU stays during the study period. How many ICU stays, identified by `stay_id`, are in this data file? How many unique patients, identified by `subject_id`, are in this data file?
 
-**Solution**
+**Solution:**
 
 8. _To compress, or not to compress. That's the question._ Let's focus on the big data file `labevents.csv.gz`. Compare compressed gz file size to the uncompressed file size. Compare the run times of `zcat < ~/mimic/labevents.csv.gz | wc -l` versus `wc -l labevents.csv`. Discuss the trade off between storage and speed for big data files. (Hint: `gzip -dk < FILENAME.gz > ./FILENAME`. Remember to delete the large `labevents.csv` file after the exercise.)
 
-**Solution**
+**Solution:**
 
 ## Q4. Who's popular in Price and Prejudice
 
