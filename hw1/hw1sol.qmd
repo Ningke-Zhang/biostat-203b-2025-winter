@@ -76,10 +76,13 @@ ls -l ~/mimic/icu/
 
 3. Briefly describe what Bash commands `zcat`, `zless`, `zmore`, and `zgrep` do.
 
-**Solution:** I tried to run all commands like `zless ~/mimic/hosp/admissions.csv.gz`, it takes long time to process but still can not generate the output. `zcat` is used to display the content of `.csv.gz` compressed files without uncompressing files permanently. `zless` is used to view the content of a compressed file in scrolling way. `zmore`also displaying the compressed file content page by page. `zgrep` can search a specific word in the compressed file.
+**Solution:**  `zcat` is used to display the content of `.csv.gz` compressed files without uncompressing files permanently. `zless` is used to view the content of a compressed file in scrolling way. `zmore`also displaying the compressed file content page by page. `zgrep` can search a specific word in the compressed file.
 ```{bash}
 ls ~/mimic/hosp/admissions.csv.gz
-zcat ~/mimic/hosp/admissions.csv.gz
+zcat < ~/mimic/hosp/admissions.csv.gz | head -5
+zless ~/mimic/hosp/admissions.csv.gz | head -5
+zmore ~/mimic/hosp/admissions.csv.gz | head -5
+zgrep "admission_type" ~/mimic/hosp/admissions.csv.gz
 ```
 4. (Looping in Bash) What's the output of the following bash script?
 ```{bash}
@@ -106,6 +109,14 @@ done
 6. What are the possible values taken by each of the variable `admission_type`, `admission_location`, `insurance`, and `ethnicity`? Also report the count for each unique value of these variables in decreasing order. (Hint: combine Linux commands `zcat`, `head`/`tail`, `awk`, `uniq -c`, `wc`, `sort`, and so on; skip the header line.)
 
 **Solution:**
+```{bash}
+zcat < ~/mimic/hosp/admissions.csv.gz | 
+awk -F, '{print $6}' |
+tail -n +2 |
+sort |
+uniq -c
+
+```
 
 7. The `icusays.csv.gz` file contains all the ICU stays during the study period. How many ICU stays, identified by `stay_id`, are in this data file? How many unique patients, identified by `subject_id`, are in this data file?
 
@@ -162,6 +173,11 @@ Explain the output. Explain the meaning of `"$1"`, `"$2"`, and `"$3"` in this sh
 
 Try following commands in Bash and interpret the results: `cal`, `cal 2025`, `cal 9 1752` (anything unusual?), `date`, `hostname`, `arch`, `uname -a`, `uptime`, `who am i`, `who`, `w`, `id`, `last | head`, `echo {con,pre}{sent,fer}{s,ed}`, `time sleep 5`, `history | tail`.
 
+**Solution:**
+
+```{bash}
+
+```
 ## Q6. Book
 
 1. Git clone the repository <https://github.com/christophergandrud/Rep-Res-Book> for the book _Reproducible Research with R and RStudio_ to your local machine. Do **not** put this repository within your homework repository `biostat-203b-2025-winter`.
