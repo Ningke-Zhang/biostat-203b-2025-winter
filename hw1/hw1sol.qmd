@@ -99,13 +99,20 @@ Display the number of lines in each data file using a similar loop. (Hint: combi
 #| eval: false
 for datafile in ~/mimic/hosp/{a,l,pa}*.gz
 do
-
+  ls -l $datafile
+  zcat < $datafile | wc -l
 done
 ```
 5. Display the first few lines of `admissions.csv.gz`. How many rows are in this data file, excluding the header line? Each `hadm_id` identifies a hospitalization. How many hospitalizations are in this data file? How many unique patients (identified by `subject_id`) are in this data file? Do they match the number of patients listed in the `patients.csv.gz` file? (Hint: combine Linux commands `zcat <`, `head`/`tail`, `awk`, `sort`, `uniq`, `wc`, and so on.)
 
 **Solution:**
 
+```{bash}
+zcat < ~/mimic/hosp/admissions.csv.gz | head -5 | 
+wc -l| 
+tail -n +2 |
+
+```
 6. What are the possible values taken by each of the variable `admission_type`, `admission_location`, `insurance`, and `ethnicity`? Also report the count for each unique value of these variables in decreasing order. (Hint: combine Linux commands `zcat`, `head`/`tail`, `awk`, `uniq -c`, `wc`, `sort`, and so on; skip the header line.)
 
 **Solution:**
