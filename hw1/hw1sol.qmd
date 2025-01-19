@@ -162,6 +162,7 @@ ls -lh labevents.csv
 time zcat < ~/mimic/hosp/labevents.csv.gz | wc -l
 time wc -l labevents.csv
 ```
+
 ## Q4. Who's popular in Price and Prejudice
 
 1. You and your friend just have finished reading *Pride and Prejudice* by Jane Austen. Among the four main characters in the book, Elizabeth, Jane, Lydia, and Darcy, your friend thinks that Darcy was the most mentioned. You, however, are certain it was Elizabeth. Obtain the full text of the novel from <http://www.gutenberg.org/cache/epub/42671/pg42671.txt> and save to your local folder. 
@@ -170,17 +171,22 @@ time wc -l labevents.csv
 wget -nc http://www.gutenberg.org/cache/epub/42671/pg42671.txt
 ```
 Explain what `wget -nc` does. Do **not** put this text file `pg42671.txt` in Git. Complete the following loop to tabulate the number of times each of the four characters is mentioned using Linux commands.
+
+**Solution:** `wget -nc` downloads the file, -nc to avoid downloading the file if it already exists. Elizabeth: 634, Jane: 293, Lydia: 171, Darcy: 418.
 ```{bash}
 #| eval: false
 wget -nc http://www.gutenberg.org/cache/epub/42671/pg42671.txt
 for char in Elizabeth Jane Lydia Darcy
 do
   echo $char:
-  # some bash commands here
+  grep -o -i $char /Users/ningkezhang/Downloads/pg42671.txt | wc -l
 done
 ```
 
 2. What's the difference between the following two commands?
+
+**Solution:**
+The first command, '>' writes the output to a new file `test1.txt`, while the second command, '>>' appends the output to an existing file `test2.txt`.
 ```{bash}
 #| eval: false
 echo 'hello, world' > test1.txt
