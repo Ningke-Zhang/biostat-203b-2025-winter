@@ -130,12 +130,13 @@ zcat < ~/mimic/hosp/patients.csv.gz | tail -n +2 | wc -l
 
 **Solution:**
 ```{bash}
-zcat < ~/mimic/hosp/admissions.csv.gz | 
-awk -F, '{print $6}' |
-tail -n +2 |
-sort |
-uniq -c
+zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $6}' | sort | uniq -c | sort -nr
 
+zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $7}' | sort | uniq -c | sort -nr
+
+zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $8}' | sort | uniq -c | sort -nr
+
+zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $9}' | sort | uniq -c | sort -nr
 ```
 
 7. The `icusays.csv.gz` file contains all the ICU stays during the study period. How many ICU stays, identified by `stay_id`, are in this data file? How many unique patients, identified by `subject_id`, are in this data file?
