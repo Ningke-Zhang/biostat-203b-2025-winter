@@ -128,25 +128,40 @@ zcat < ~/mimic/hosp/patients.csv.gz | tail -n +2 | wc -l
 ```
 6. What are the possible values taken by each of the variable `admission_type`, `admission_location`, `insurance`, and `ethnicity`? Also report the count for each unique value of these variables in decreasing order. (Hint: combine Linux commands `zcat`, `head`/`tail`, `awk`, `uniq -c`, `wc`, `sort`, and so on; skip the header line.)
 
-**Solution:**
+**Solution:** The possible values taken by each of the variable and count for each unique value in decreasing order are displayed below.
 ```{bash}
 zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $6}' | sort | uniq -c | sort -nr
 
-zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $7}' | sort | uniq -c | sort -nr
-
 zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $8}' | sort | uniq -c | sort -nr
 
-zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $9}' | sort | uniq -c | sort -nr
+zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $10}' | sort | uniq -c | sort -nr
+
+zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $13}' | sort | uniq -c | sort -nr
 ```
 
-7. The `icusays.csv.gz` file contains all the ICU stays during the study period. How many ICU stays, identified by `stay_id`, are in this data file? How many unique patients, identified by `subject_id`, are in this data file?
+7. The `icustays.csv.gz` file contains all the ICU stays during the study period. How many ICU stays, identified by `stay_id`, are in this data file? How many unique patients, identified by `subject_id`, are in this data file?
 
-**Solution:**
+**Solution:** There are 994458 ICU stays in this data file. There are 65366 unique patients in this data file.
+```{bash}
+zcat < ~/mimic/icu/icustays.csv.gz | head -1
 
+zcat < ~/mimic/icu/icustays.csv.gz | tail -n +2 | awk -F, '{print $3}' | wc -l
+zcat < ~/mimic/icu/icustays.csv.gz | tail -n +2 | awk -F, '{print $1}' | sort | uniq | wc -l
+```
 8. _To compress, or not to compress. That's the question._ Let's focus on the big data file `labevents.csv.gz`. Compare compressed gz file size to the uncompressed file size. Compare the run times of `zcat < ~/mimic/labevents.csv.gz | wc -l` versus `wc -l labevents.csv`. Discuss the trade off between storage and speed for big data files. (Hint: `gzip -dk < FILENAME.gz > ./FILENAME`. Remember to delete the large `labevents.csv` file after the exercise.)
 
-**Solution:**
+**Solution:** Comressed file size is 2.4G, uncompressed file size is 17G. The run time of `zcat < ~/mimic/labevents.csv.gz | wc -l` is 15.454s, and the run time of `wc -l labevents.csv` is 15.537s. 
+The trade off between storage and speed for big data files is that compressed files save storage space but take longer to process, while uncompressed files take up more storage space but are faster to process. This makes compressed files more suitable for long-term storage. (setting no output for this chunk)
+```{bash}
+#| eval: false
+#| include: false
+ls -lh ~/mimic/hosp/labevents.csv.gz
+gzip -dk < ~/mimic/hosp/labevents.csv.gz > ./labevents.csv
+ls -lh labevents.csv
 
+time zcat < ~/mimic/hosp/labevents.csv.gz | wc -l
+time wc -l labevents.csv
+```
 ## Q4. Who's popular in Price and Prejudice
 
 1. You and your friend just have finished reading *Pride and Prejudice* by Jane Austen. Among the four main characters in the book, Elizabeth, Jane, Lydia, and Darcy, your friend thinks that Darcy was the most mentioned. You, however, are certain it was Elizabeth. Obtain the full text of the novel from <http://www.gutenberg.org/cache/epub/42671/pg42671.txt> and save to your local folder. 
