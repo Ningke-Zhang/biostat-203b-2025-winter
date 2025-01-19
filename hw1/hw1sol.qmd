@@ -62,7 +62,7 @@ ls -l ~/mimic/
 ```
 Refer to the documentation <https://physionet.org/content/mimiciv/3.1/> for details of data files. Do **not** put these data files into Git; they are big. Do **not** copy them into your directory. Do **not** decompress the gz data files. These create unnecessary big files and are not big-data-friendly practices. Read from the data folder `~/mimic` directly in following exercises. 
 
-**Solution:** I downloaded MIMIC v3.1 to my pc and made it available at `~/mimic/` .
+**Solution:** I downloaded MIMIC v3.1 to my pc and made it available at `~/mimic/`.
 
   Use Bash commands to answer following questions.
 
@@ -76,7 +76,8 @@ ls -l ~/mimic/icu/
 
 3. Briefly describe what Bash commands `zcat`, `zless`, `zmore`, and `zgrep` do.
 
-**Solution:**  `zcat` is used to display the content of `.csv.gz` compressed files without uncompressing files permanently. `zless` is used to view the content of a compressed file in scrolling way. `zmore`also displaying the compressed file content page by page. `zgrep` can search a specific word in the compressed file.
+**Solution:**  
+`zcat` is used to display the content of `.csv.gz` compressed files without uncompressing files permanently. `zless` is used to view the content of a compressed file in scrolling way. `zmore`also displaying the compressed file content page by page. `zgrep` can search a specific word in the compressed file.
 ```{bash}
 ls ~/mimic/hosp/admissions.csv.gz
 zcat < ~/mimic/hosp/admissions.csv.gz | head -5
@@ -94,7 +95,8 @@ done
 ```
 Display the number of lines in each data file using a similar loop. (Hint: combine linux commands `zcat <` and `wc -l`.)
 
-**Solution:**
+**Solution:** 
+The output is file permissions, number of links, owner name, owner group, file size, date and time of last modification, and file name/path. 
 ```{bash}
 #| eval: false
 for datafile in ~/mimic/hosp/{a,l,pa}*.gz
@@ -110,13 +112,19 @@ How many unique patients (identified by `subject_id`) are in this data file? Do 
 (Hint: combine Linux commands `zcat <`, `head`/`tail`, `awk`, `sort`, `uniq`, `wc`, and so on.)
 
 **Solution:**
-
+The first few lines of `admissions.csv.gz` are displayed below.
+There are 546028 rows in this data file, excluding the header line. 
+There are 546029 hospitalizations in this data file. 
+There are 223453 unique patients in this data file. The number of patients listed in the `patients.csv.gz` file is 364627. Does not match.
 ```{bash}
 zcat < ~/mimic/hosp/admissions.csv.gz | head -5
 
 zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | wc -l
 
-zcat < ~/mimic/hosp/admissions.csv.gz | awk -F, '{print $2}' | sort | uniq | wc -l
+zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $2}' | sort | uniq | wc -l
+
+zcat < ~/mimic/hosp/admissions.csv.gz | tail -n +2 | awk -F, '{print $1}' | sort | uniq | wc -l
+zcat < ~/mimic/hosp/patients.csv.gz | tail -n +2 | wc -l
 ```
 6. What are the possible values taken by each of the variable `admission_type`, `admission_location`, `insurance`, and `ethnicity`? Also report the count for each unique value of these variables in decreasing order. (Hint: combine Linux commands `zcat`, `head`/`tail`, `awk`, `uniq -c`, `wc`, `sort`, and so on; skip the header line.)
 
