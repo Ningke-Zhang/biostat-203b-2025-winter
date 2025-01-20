@@ -212,16 +212,45 @@ Using `chmod` to make the file executable by the owner, and run
 Explain the output. Explain the meaning of `"$1"`, `"$2"`, and `"$3"` in this shell script. Why do we need the first line of the shell script?
 
 **Solution:**
-
+```{bash}
+ls -l middle.sh
+```
 
 ## Q5. More fun with Linux
 
 Try following commands in Bash and interpret the results: `cal`, `cal 2025`, `cal 9 1752` (anything unusual?), `date`, `hostname`, `arch`, `uname -a`, `uptime`, `who am i`, `who`, `w`, `id`, `last | head`, `echo {con,pre}{sent,fer}{s,ed}`, `time sleep 5`, `history | tail`.
 
 **Solution:**
-
+`cal` displays the calendar for the current month. 
+`cal 2025` displays the calendar for the year 2025. 
+`cal 9 1752` displays the calendar for September 1752, but the calendar is incorrect because the Gregorian calendar was adopted in 1752. `date` displays the current date and time. 
+`hostname` displays the name of the host. 
+`arch` displays the architecture of the system. 
+`uname -a` displays the system information. 
+`uptime` displays the system uptime. 
+`who am i` displays the current user. 
+`who` displays the users currently logged in. 
+`w` displays the users currently logged in and what they are doing. 
+`id` displays the user and group information. 
+`last | head` displays the last login information. 
+`echo {con,pre}{sent,fer}{s,ed}` displays the combinations of the words. 
+`time sleep 5` displays the time it takes to sleep for 5 seconds. 
+`history | tail` displays the last few commands in the history.
 ```{bash}
-
+cal
+cal 2025
+cal 9 1752
+date
+uname -a
+uptime
+who am i
+who
+w
+id
+last | head
+echo {con,pre}{sent,fer}{s,ed}
+time sleep 5
+history | tail
 ```
 ## Q6. Book
 
