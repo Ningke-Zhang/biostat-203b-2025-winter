@@ -212,8 +212,16 @@ Using `chmod` to make the file executable by the owner, and run
 Explain the output. Explain the meaning of `"$1"`, `"$2"`, and `"$3"` in this shell script. Why do we need the first line of the shell script?
 
 **Solution:**
+`"$1"` here is the first argument, which is the file pg42671.txt. `"$2"` is the second argument, which is 20, and `"$3"` is the third argument, for here is 5. `head -n "$2" "$1` is  selecting the first 20 lines of the file `pg42671.txt`, and `tail -n "$3"` is selecting the last 5 lines of the first 20 lines.
+The first line of the shell script is a shebang, that tells the system which interpreter to use to run the script.
 ```{bash}
-ls -l middle.sh
+echo '#!/bin/sh
+# Select lines from the middle of a file.
+# Usage: bash middle.sh filename end_line num_lines
+head -n "$2" "$1" | tail -n "$3"' > middle.sh
+
+chmod u+x middle.sh
+./middle.sh pg42671.txt 20 5
 ```
 
 ## Q5. More fun with Linux
