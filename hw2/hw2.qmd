@@ -2,7 +2,7 @@
 title: "Biostat 203B Homework 2"
 subtitle: Due Feb 7, 2025 @ 11:59PM
 author: "Ningke Zhang 705834790"
-format:
+format: 
   html:
     theme: cosmo
     embed-resources: true
