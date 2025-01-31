@@ -56,6 +56,22 @@ There are quite a few utilities in R for reading plain text data files. Let us t
 
 Which function is fastest? Is there difference in the (default) parsed data types? How much memory does each resultant dataframe or tibble use? (Hint: `system.time` measures run times; `pryr::object_size` measures memory usage; all these readers can take gz file as input without explicit decompression.) 
 
+**Solusion:**
+`fread` is the fastest. 
+The default parsed data types are different. `read.csv` uses `factor` for Character Columns, `num` or `int` for Numeric Columns, and `Chr` for Logical Columns, and automatically converted from character for factors. `read_csv` uses `chr` for character columns, `dbl` or `int` for numeric columns, parsed as date or datetime for date columns,`lgl` for logical columns. `fread` uses `chr` for character columns, `num` or `int` for numeric columns, `lgl` for logical columns. The memory usage of `fread` is the smallest.
+```{r}
+system.time(read.csv("~/mimic/hosp/admissions.csv.gz"))
+system.time(read_csv("~/mimic/hosp/admissions.csv.gz"))
+system.time(fread("~/mimic/hosp/admissions.csv.gz"))
+
+str(read.csv("~/mimic/hosp/admissions.csv.gz"))
+glimpse(read_csv("~/mimic/hosp/admissions.csv.gz"))
+str(fread("~/mimic/hosp/admissions.csv.gz"))
+
+pryr::object_size(read.csv("~/mimic/hosp/admissions.csv.gz"))
+pryr::object_size(read_csv("~/mimic/hosp/admissions.csv.gz"))
+pryr::object_size(fread("~/mimic/hosp/admissions.csv.gz"))
+```
 ### Q1.2 User-supplied data types
 
 Re-ingest `admissions.csv.gz` by indicating appropriate column data types in `read_csv`. Does the run time change? How much memory does the result tibble use? (Hint: `col_types` argument in `read_csv`.)
