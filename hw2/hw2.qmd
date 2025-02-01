@@ -58,7 +58,8 @@ Which function is fastest? Is there difference in the (default) parsed data type
 
 **Solusion:**
 `fread` is the fastest. 
-The default parsed data types are different. `read.csv` uses `factor` for Character Columns, `num` or `int` for Numeric Columns, and `Chr` for Logical Columns, and automatically converted from character for factors. `read_csv` uses `chr` for character columns, `dbl` or `int` for numeric columns, parsed as date or datetime for date columns,`lgl` for logical columns. `fread` uses `chr` for character columns, `num` or `int` for numeric columns, `lgl` for logical columns. The memory usage of `fread` is the smallest.
+The default parsed data types are different. `read.csv` uses `factor` for Character Columns, `num` or `int` for Numeric Columns, and `Chr` for Logical Columns, and automatically converted from character for factors. `read_csv` uses `chr` for character columns, `dbl` or `int` for numeric columns, parsed as date or datetime for date columns,`lgl` for logical columns. `fread` uses `chr` for character columns, `num` or `int` for numeric columns, `lgl` for logical columns. 
+The memory usage of `fread` is the smallest.
 ```{r}
 system.time(read.csv("~/mimic/hosp/admissions.csv.gz"))
 system.time(read_csv("~/mimic/hosp/admissions.csv.gz"))
@@ -76,6 +77,12 @@ pryr::object_size(fread("~/mimic/hosp/admissions.csv.gz"))
 
 Re-ingest `admissions.csv.gz` by indicating appropriate column data types in `read_csv`. Does the run time change? How much memory does the result tibble use? (Hint: `col_types` argument in `read_csv`.)
 
+**Solusion:**
+The run time is faster than the default data types. The memory usage is stay same.
+```{r}
+system.time(read_csv("~/mimic/hosp/admissions.csv.gz", col_types = cols()))
+pryr::object_size(read_csv("~/mimic/hosp/admissions.csv.gz", col_types = cols()))
+```
 ## Q2. Ingest big data files
 
 <p align="center">
