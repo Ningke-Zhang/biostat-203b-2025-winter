@@ -150,7 +150,10 @@ In later exercises, we will only be interested in the following lab items: creat
 Display the first 10 lines of the new file `labevents_filtered.csv.gz`. How many lines are in this new file, excluding the header? How long does it take `read_csv` to ingest `labevents_filtered.csv.gz`?
 
 **Solusion:**
+There are 32679896 lines, excluding the header. It takes 12.492s, with 1.05 GB RAM.
 ```{bash}
+#| eval: false
+#| include: false
 zcat < ~/mimic/hosp/labevents.csv.gz | 
 awk -F',' 'NR==1 {print "subject_id,itemid,charttime,valuenum"; next} 
            ($5 == 50912 || $5 == 50971 || $5 == 50983 || $5 == 50902 || 
@@ -164,11 +167,13 @@ zcat < labevents_filtered.csv.gz | head -10
 
 zcat < labevents_filtered.csv.gz | tail -n +2 | wc -l
 
+```
+
+```{r}
 system.time(
-  df_lab <- read_csv("labevents_filtered.csv.gz")
+  lab <- read_csv("labevents_filtered.csv.gz")
 )
-library(pryr)
-object_size(df_lab)
+pryr::object_size(lab)
 
 ```
 
@@ -184,6 +189,30 @@ Then use [`arrow::open_dataset`](https://arrow.apache.org/docs/r/reference/open_
 
 Write a few sentences to explain what is Apache Arrow. Imagine you want to explain it to a layman in an elevator. 
 
+**Solusion:**
+The process takes 3.233s. Apache Arrow keeps data in a special format that we can read instantly, without wasting time converting files. 
+```{bash}
+#| eval: false
+#| include: false
+gunzip -c labevents_filtered.csv.gz > labevents.csv
+```
+
+```{r}
+system.time({
+  lab_csv <- open_dataset("labevents.csv", format = "csv")
+
+  arrow <- lab_csv |>
+    select(subject_id, itemid, charttime, valuenum) %>%
+    filter(itemid %in% 
+             c(50912, 50971, 50983, 50902, 50882, 51221, 51301, 50931)) |>
+    collect()  
+})
+
+nrow(arrow)
+
+print(head(arrow, 10))
+```
+
 ### Q2.5 Compress `labevents.csv` to Parquet format and ingest/select/filter
 
 <p align="center">
@@ -194,6 +223,30 @@ Re-write the csv file `labevents.csv` in the binary Parquet format (Hint: [`arro
 
 Write a few sentences to explain what is the Parquet format. Imagine you want to explain it to a layman in an elevator.
 
+**Solusion:**
+The Parquet is 128M, process takes 0.830s. Parquet is like a ZIP file for big data. It compresses and organizes information, only reads what’s needed, so it takes up less space and loads much faster than read_csv. 
+```{r}
+parquet <- "labevents_parquet"
+
+write_dataset(open_dataset("labevents.csv", format = "csv"), 
+              path = parquet, format = "parquet")
+
+system(sprintf("du -sh %s", parquet))
+
+system.time({
+  parquet_ds <- open_dataset(parquet, format = "parquet")
+
+  parquet_df <- parquet_ds |>
+    select(subject_id, itemid, charttime, valuenum) |>
+    filter(itemid %in% 
+             c(50912, 50971, 50983, 50902, 50882, 51221, 51301, 50931)) |>
+    collect()
+})
+
+nrow(parquet_df)
+
+print(head(parquet_df, 10))
+```
 ### Q2.6 DuckDB
 
 <p align="center">
@@ -204,6 +257,25 @@ Ingest the Parquet file, convert it to a DuckDB table by [`arrow::to_duckdb`](ht
 
 Write a few sentences to explain what is DuckDB. Imagine you want to explain it to a layman in an elevator.
 
+**Solusion:**
+
+```{r}
+system.time({
+  parquet_dk <- open_dataset("labevents_parquet", format = "parquet")
+  con <- dbConnect(duckdb())
+  db <- to_duckdb(parquet_dk, con = con)
+  duckdb_df <- db |>
+    select(subject_id, itemid, charttime, valuenum) |>
+    filter(itemid %in% c(50912, 50971, 50983, 50902, 50882, 51221, 51301, 50931)) |>
+    collect()
+})
+
+nrow(duckdb_df)
+
+print(head(duckdb_df, 10))
+
+dbDisconnect(con)
+```
 ## Q3. Ingest and filter `chartevents.csv.gz`
 
 [`chartevents.csv.gz`](https://mimic.mit.edu/docs/iv/modules/icu/chartevents/) contains all the charted data available for a patient. During their ICU stay, the primary repository of a patient’s information is their electronic chart. The `itemid` variable indicates a single measurement type in the database. The `value` variable is the value measured for `itemid`. The first 10 lines of `chartevents.csv.gz` are
