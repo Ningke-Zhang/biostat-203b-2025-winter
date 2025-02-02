@@ -126,7 +126,7 @@ Try to ingest only columns `subject_id`, `itemid`, `charttime`, and `valuenum` i
 **Solusion:** For `read_csv` still can not solve the ingestion issue, but `fread` can take 36.124s to process, which menas fewer columns come with less memory usage and less processing to get faster ingestion.
 ```{r}
 #| eval: false
-#| 
+
 system.time(read_csv("~/mimic/hosp/labevents.csv.gz", 
             col_select = c("subject_id", "itemid", "charttime", "valuenum")))
 pryr::object_size(read_csv("~/mimic/hosp/labevents.csv.gz", 
@@ -153,6 +153,7 @@ Display the first 10 lines of the new file `labevents_filtered.csv.gz`. How many
 There are 32679896 lines, excluding the header. It takes 12.492s, with 1.05 GB RAM.
 ```{bash}
 #| eval: false
+#| 
 zcat < ~/mimic/hosp/labevents.csv.gz | 
 awk -F',' 'NR==1 {print "subject_id,itemid,charttime,valuenum"; next} 
            ($5 == 50912 || $5 == 50971 || $5 == 50983 || $5 == 50902 || 
