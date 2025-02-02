@@ -112,7 +112,7 @@ Try to ingest `labevents.csv.gz` using `read_csv`. What happens? If it takes mor
 It takes more than 5 minutes, and timing stopped, only 79.594 MiB of free RAM is available. Also, when I try `fread`, it shows: vector memory limit of 16.0 Gb reached, so processing Big Data is very demanding on RAM.
 ```{r}
 #| eval: false
-#| include: false
+
 system.time(read_csv("~/mimic/hosp/labevents.csv.gz"))
 pryr::object_size(read_csv("~/mimic/hosp/labevents.csv.gz"))
 
@@ -126,7 +126,7 @@ Try to ingest only columns `subject_id`, `itemid`, `charttime`, and `valuenum` i
 **Solusion:** For `read_csv` still can not solve the ingestion issue, but `fread` can take 36.124s to process, which menas fewer columns come with less memory usage and less processing to get faster ingestion.
 ```{r}
 #| eval: false
-#| include: false
+#| 
 system.time(read_csv("~/mimic/hosp/labevents.csv.gz", 
             col_select = c("subject_id", "itemid", "charttime", "valuenum")))
 pryr::object_size(read_csv("~/mimic/hosp/labevents.csv.gz", 
@@ -153,7 +153,6 @@ Display the first 10 lines of the new file `labevents_filtered.csv.gz`. How many
 There are 32679896 lines, excluding the header. It takes 12.492s, with 1.05 GB RAM.
 ```{bash}
 #| eval: false
-#| include: false
 zcat < ~/mimic/hosp/labevents.csv.gz | 
 awk -F',' 'NR==1 {print "subject_id,itemid,charttime,valuenum"; next} 
            ($5 == 50912 || $5 == 50971 || $5 == 50983 || $5 == 50902 || 
@@ -193,7 +192,6 @@ Write a few sentences to explain what is Apache Arrow. Imagine you want to expla
 The process takes 3.233s. Apache Arrow keeps data in a special format that we can read instantly, without wasting time converting files. 
 ```{bash}
 #| eval: false
-#| include: false
 gunzip -c labevents_filtered.csv.gz > labevents.csv
 ```
 
@@ -258,15 +256,16 @@ Ingest the Parquet file, convert it to a DuckDB table by [`arrow::to_duckdb`](ht
 Write a few sentences to explain what is DuckDB. Imagine you want to explain it to a layman in an elevator.
 
 **Solusion:**
-
+It takes 1.327s to process. DuckDB is a high-performance, lightweight database that runs locally. If opening an excel table with millions of rows of data will get stuck, use DuckDB to filter, calculate and merge data will be on the fly.
 ```{r}
 system.time({
-  parquet_dk <- open_dataset("labevents_parquet", format = "parquet")
+  parquet_db <- open_dataset("labevents_parquet", format = "parquet")
   con <- dbConnect(duckdb())
-  db <- to_duckdb(parquet_dk, con = con)
+  db <- to_duckdb(parquet_db, con = con)
   duckdb_df <- db |>
     select(subject_id, itemid, charttime, valuenum) |>
-    filter(itemid %in% c(50912, 50971, 50983, 50902, 50882, 51221, 51301, 50931)) |>
+    filter(itemid %in% 
+             c(50912, 50971, 50983, 50902, 50882, 51221, 51301, 50931)) |>
     collect()
 })
 
@@ -295,3 +294,27 @@ In later exercises, we are interested in the vitals for ICU patients: heart rate
 
 Document the steps and show code. Display the number of rows and the first 10 rows of the result tibble.
 
+**Solusion:**
+The file `chartevents_filtered.csv.gz` which is after compressed contains 30195426 rows, the first 10 rows are displaied.
+```{r}
+# Open dataset as arrow table
+chartevents <- open_dataset("~/mimic/icu/chartevents.csv.gz", format = "csv")
+
+# Filter and select relevant columns
+chartevents_filtered <- chartevents |>
+  select(subject_id, itemid, charttime, value) |>
+  filter(itemid %in% c(220045, 220181, 220179, 223761, 220210)) |>
+  collect()
+```
+
+```{r}
+# Save as a compressed CSV
+write_csv_arrow(chartevents_filtered, "chartevents_filtered.csv.gz")
+```
+
+```{bash}
+#Display first 10 rows
+zcat < chartevents_filtered.csv.gz | head -10
+#Display the number of rows
+zcat < chartevents_filtered.csv.gz | tail -n +2 | wc -l
+```
