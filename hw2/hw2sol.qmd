@@ -108,8 +108,8 @@ zcat < ~/mimic/hosp/labevents.csv.gz | head -10
 
 Try to ingest `labevents.csv.gz` using `read_csv`. What happens? If it takes more than 3 minutes on your computer, then abort the program and report your findings. 
 
-**Solusion:**
-It takes more than 5 minutes, and timing stopped, only 79.594 MiB of free RAM is available. Also, when I try `fread`, it shows: vector memory limit of 16.0 Gb reached, so processing Big Data is very demanding on RAM.
+**Solusion:** Explain why read_csv cannot ingest labevents.csv.gz
+It takes more than 5 minutes, and timing stopped, only 79.594 MiB of free RAM is available. Also, when I try `fread`, it shows: vector memory limit of 16.0 Gb reached, so processing Big Data is very demanding on RAM. 
 ```{r}
 #| eval: false
 
@@ -123,7 +123,8 @@ system.time(fread("~/mimic/hosp/labevents.csv.gz"))
 
 Try to ingest only columns `subject_id`, `itemid`, `charttime`, and `valuenum` in `labevents.csv.gz` using `read_csv`.  Does this solve the ingestion issue? (Hint: `col_select` argument in `read_csv`.)
 
-**Solusion:** For `read_csv` still can not solve the ingestion issue, but `fread` can take 36.124s to process, which menas fewer columns come with less memory usage and less processing to get faster ingestion.
+**Solusion:** 
+For `read_csv` still can not solve the ingestion issue, but `fread` can take 36.124s to process, which menas fewer columns come with less memory usage and less processing to get faster ingestion. `read_csv` maybe cannot ingest gz files directly.
 ```{r}
 #| eval: false
 
@@ -153,7 +154,7 @@ Display the first 10 lines of the new file `labevents_filtered.csv.gz`. How many
 There are 32679896 lines, excluding the header. It takes 12.492s, with 1.05 GB RAM.
 ```{bash}
 #| eval: false
-#| 
+
 zcat < ~/mimic/hosp/labevents.csv.gz | 
 awk -F',' 'NR==1 {print "subject_id,itemid,charttime,valuenum"; next} 
            ($5 == 50912 || $5 == 50971 || $5 == 50983 || $5 == 50902 || 
