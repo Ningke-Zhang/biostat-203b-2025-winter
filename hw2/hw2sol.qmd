@@ -77,7 +77,7 @@ pryr::object_size(fread("~/mimic/hosp/admissions.csv.gz"))
 
 Re-ingest `admissions.csv.gz` by indicating appropriate column data types in `read_csv`. Does the run time change? How much memory does the result tibble use? (Hint: `col_types` argument in `read_csv`.)
 
-**Solusion:**
+**Solution:**
 The run time is faster than the default data types. The memory usage is stay same.
 ```{r}
 system.time(read_csv("~/mimic/hosp/admissions.csv.gz", 
@@ -108,7 +108,7 @@ zcat < ~/mimic/hosp/labevents.csv.gz | head -10
 
 Try to ingest `labevents.csv.gz` using `read_csv`. What happens? If it takes more than 3 minutes on your computer, then abort the program and report your findings. 
 
-**Solusion:** Explain why read_csv cannot ingest labevents.csv.gz
+**Solution:** 
 It takes more than 5 minutes, and timing stopped, only 79.594 MiB of free RAM is available. Also, when I try `fread`, it shows: vector memory limit of 16.0 Gb reached, so processing Big Data is very demanding on RAM. 
 ```{r}
 #| eval: false
@@ -123,7 +123,7 @@ system.time(fread("~/mimic/hosp/labevents.csv.gz"))
 
 Try to ingest only columns `subject_id`, `itemid`, `charttime`, and `valuenum` in `labevents.csv.gz` using `read_csv`.  Does this solve the ingestion issue? (Hint: `col_select` argument in `read_csv`.)
 
-**Solusion:** 
+**Solution:** 
 For `read_csv` still can not solve the ingestion issue, but `fread` can take 36.124s to process, which menas fewer columns come with less memory usage and less processing to get faster ingestion. `read_csv` maybe cannot ingest gz files directly.
 ```{r}
 #| eval: false
@@ -150,7 +150,7 @@ In later exercises, we will only be interested in the following lab items: creat
 
 Display the first 10 lines of the new file `labevents_filtered.csv.gz`. How many lines are in this new file, excluding the header? How long does it take `read_csv` to ingest `labevents_filtered.csv.gz`?
 
-**Solusion:**
+**Solution:**
 There are 32679896 lines, excluding the header. It takes 12.492s, with 1.05 GB RAM.
 ```{bash}
 #| eval: false
@@ -190,7 +190,7 @@ Then use [`arrow::open_dataset`](https://arrow.apache.org/docs/r/reference/open_
 
 Write a few sentences to explain what is Apache Arrow. Imagine you want to explain it to a layman in an elevator. 
 
-**Solusion:**
+**Solution:**
 The process takes 3.233s. Apache Arrow keeps data in a special format that we can read instantly, without wasting time converting files. 
 ```{bash}
 #| eval: false
@@ -202,7 +202,7 @@ system.time({
   lab_csv <- open_dataset("labevents.csv", format = "csv")
 
   arrow <- lab_csv |>
-    select(subject_id, itemid, charttime, valuenum) %>%
+    select(subject_id, itemid, charttime, valuenum) |>
     filter(itemid %in% 
              c(50912, 50971, 50983, 50902, 50882, 51221, 51301, 50931)) |>
     collect()  
@@ -223,7 +223,7 @@ Re-write the csv file `labevents.csv` in the binary Parquet format (Hint: [`arro
 
 Write a few sentences to explain what is the Parquet format. Imagine you want to explain it to a layman in an elevator.
 
-**Solusion:**
+**Solution:**
 The Parquet is 128M, process takes 0.830s. Parquet is like a ZIP file for big data. It compresses and organizes information, only reads what’s needed, so it takes up less space and loads much faster than read_csv. 
 ```{r}
 parquet <- "labevents_parquet"
@@ -257,7 +257,7 @@ Ingest the Parquet file, convert it to a DuckDB table by [`arrow::to_duckdb`](ht
 
 Write a few sentences to explain what is DuckDB. Imagine you want to explain it to a layman in an elevator.
 
-**Solusion:**
+**Solution:**
 It takes 1.327s to process. DuckDB is a high-performance, lightweight database that runs locally. If opening an excel table with millions of rows of data will get stuck, use DuckDB to filter, calculate and merge data will be on the fly.
 ```{r}
 system.time({
@@ -296,7 +296,7 @@ In later exercises, we are interested in the vitals for ICU patients: heart rate
 
 Document the steps and show code. Display the number of rows and the first 10 rows of the result tibble.
 
-**Solusion:**
+**Solution:**
 The file `chartevents_filtered.csv.gz` which is after compressed contains 30195426 rows, the first 10 rows are displaied.
 ```{r}
 # Open dataset as arrow table
