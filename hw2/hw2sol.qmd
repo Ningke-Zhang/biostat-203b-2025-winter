@@ -108,7 +108,7 @@ It takes more than 5 minutes, and timing stopped, only 79.594 MiB of free RAM is
 system.time(read_csv("~/mimic/hosp/labevents.csv.gz"))
 pryr::object_size(read_csv("~/mimic/hosp/labevents.csv.gz"))
 
-system.time(fread("~/mimic/hosp/labevents.csv.gz"))
+system.time(fread("~/mimic/hosp/labevents.csv.gz")) 
 ```
 
 ### Q2.2 Ingest selected columns of `labevents.csv.gz` by `read_csv`
