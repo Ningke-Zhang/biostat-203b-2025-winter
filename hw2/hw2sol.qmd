@@ -3,16 +3,7 @@ title: "Biostat 203B Homework 2"
 subtitle: Due Feb 7, 2025 @ 11:59PM
 author: "Ningke Zhang 705834790"
 format: 
-  html:
-    theme: cosmo
-    embed-resources: true
-    number-sections: false
-    toc: true
-    toc-depth: 4
-    toc-location: left
-    code-fold: false
-    link-external-icon: true
-    link-external-newwindow: true
+  pdf: default
 ---
 
 Display machine information for reproducibility:
@@ -90,7 +81,7 @@ pryr::object_size(read_csv("~/mimic/hosp/admissions.csv.gz",
 <p align="center">
   <img src="./bigfile.png" width="50%">
 </p>
-
+![bigfile](bigfile.png)
 Let us focus on a bigger file, `labevents.csv.gz`, which is about 130x bigger than `admissions.csv.gz`.
 ```{bash}
 ls -l ~/mimic/hosp/labevents.csv.gz
@@ -105,6 +96,7 @@ zcat < ~/mimic/hosp/labevents.csv.gz | head -10
 <p align="center">
   <img src="./readr_logo.png" width="20%">
 </p>
+![readr](readr_logo.png)
 
 Try to ingest `labevents.csv.gz` using `read_csv`. What happens? If it takes more than 3 minutes on your computer, then abort the program and report your findings. 
 
@@ -143,7 +135,7 @@ system.time(fread("~/mimic/hosp/labevents.csv.gz",
 <p align="center">
   <img src="./linux_logo.png" width="20%">
 </p>
-
+![linux](linux_logo.png)
 Our first strategy to handle this big data file is to make a subset of the `labevents` data.  Read the [MIMIC documentation](https://mimic.mit.edu/docs/iv/modules/hosp/labevents/) for the content in data file `labevents.csv`.
 
 In later exercises, we will only be interested in the following lab items: creatinine (50912), potassium (50971), sodium (50983), chloride (50902), bicarbonate (50882), hematocrit (51221), white blood cell count (51301), and glucose (50931) and the following columns: `subject_id`, `itemid`, `charttime`, `valuenum`. Write a Bash command to extract these columns and rows from `labevents.csv.gz` and save the result to a new file `labevents_filtered.csv.gz` in the current working directory. (Hint: Use `zcat <` to pipe the output of `labevents.csv.gz` to `awk` and then to `gzip` to compress the output. Do **not** put `labevents_filtered.csv.gz` in Git! To save render time, you can put `#| eval: false` at the beginning of this code chunk. TA will change it to `#| eval: true` before rendering your qmd file.)
@@ -183,6 +175,7 @@ pryr::object_size(lab)
 <p align="center">
   <img src="./arrow_logo.png" width="30%">
 </p>
+![arrow](arrow_logo.png)
 
 Our second strategy is to use [Apache Arrow](https://arrow.apache.org/) for larger-than-memory data analytics. Unfortunately Arrow does not work with gz files directly. First decompress `labevents.csv.gz` to `labevents.csv` and put it in the current working directory (do not add it in git!). To save render time, put `#| eval: false` at the beginning of this code chunk. TA will change it to `#| eval: true` when rendering your qmd file.
 
@@ -191,10 +184,10 @@ Then use [`arrow::open_dataset`](https://arrow.apache.org/docs/r/reference/open_
 Write a few sentences to explain what is Apache Arrow. Imagine you want to explain it to a layman in an elevator. 
 
 **Solution:**
-The process takes 3.233s. Apache Arrow keeps data in a special format that we can read instantly, without wasting time converting files. 
+The process takes 37.127s. Apache Arrow keeps data in a special format that we can read instantly, without wasting time converting files. 
 ```{bash}
 #| eval: false
-gunzip -c labevents_filtered.csv.gz > labevents.csv
+gunzip -c ~/mimic/hosp/labevents.csv.gz > labevents.csv
 ```
 
 ```{r}
@@ -218,13 +211,14 @@ print(head(arrow, 10))
 <p align="center">
   <img src="./parquet_logo.png" width="30%">
 </p>
+![parquet](parquet_logo.png)
 
 Re-write the csv file `labevents.csv` in the binary Parquet format (Hint: [`arrow::write_dataset`](https://arrow.apache.org/docs/r/reference/write_dataset.html).) How large is the Parquet file(s)? How long does the ingest+select+filter process of the Parquet file(s) take? Display the number of rows and the first 10 rows of the result tibble and make sure they match those in Q2.3. (Hint: use `dplyr` verbs for selecting columns and filtering rows.)
 
 Write a few sentences to explain what is the Parquet format. Imagine you want to explain it to a layman in an elevator.
 
 **Solution:**
-The Parquet is 128M, process takes 0.830s. Parquet is like a ZIP file for big data. It compresses and organizes information, only reads what’s needed, so it takes up less space and loads much faster than read_csv. 
+The Parquet is 2.5G, process takes 6.801s. Parquet is like a ZIP file for big data. It compresses and organizes information, only reads what’s needed, so it takes up less space and loads much faster than read_csv. 
 ```{r}
 parquet <- "labevents_parquet"
 
@@ -252,13 +246,14 @@ print(head(parquet_df, 10))
 <p align="center">
   <img src="./duckdb_logo.png" width="20%">
 </p>
+![duckdb](duckdb_logo.png)
 
 Ingest the Parquet file, convert it to a DuckDB table by [`arrow::to_duckdb`](https://arrow.apache.org/docs/r/reference/to_duckdb.html), select columns, and filter rows as in Q2.5. How long does the ingest+convert+select+filter process take? Display the number of rows and the first 10 rows of the result tibble and make sure they match those in Q2.3. (Hint: use `dplyr` verbs for selecting columns and filtering rows.)
 
 Write a few sentences to explain what is DuckDB. Imagine you want to explain it to a layman in an elevator.
 
 **Solution:**
-It takes 1.327s to process. DuckDB is a high-performance, lightweight database that runs locally. If opening an excel table with millions of rows of data will get stuck, use DuckDB to filter, calculate and merge data will be on the fly.
+It takes 7.782s to process. DuckDB is a high-performance, lightweight database that runs locally. If opening an excel table with millions of rows of data will get stuck, use DuckDB to filter, calculate and merge data will be on the fly.
 ```{r}
 system.time({
   parquet_db <- open_dataset("labevents_parquet", format = "parquet")
