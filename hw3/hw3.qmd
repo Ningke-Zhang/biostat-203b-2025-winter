@@ -31,6 +31,7 @@ library(tidyverse)
 Display your machine memory.
 ```{r}
 memuse::Sys.meminfo()
+
 ```
 
 In this exercise, we use tidyverse (ggplot2, dplyr, etc) to explore the [MIMIC-IV](https://physionet.org/content/mimiciv/3.1/) data introduced in [homework 1](https://ucla-biostat-203b.github.io/2025winter/hw/hw1/hw1.html) and to build a cohort of ICU stays.
@@ -48,6 +49,9 @@ Do a similar visualization for the patient with `subject_id` 10063848 using ggpl
 
 Hint: We need to pull information from data files `patients.csv.gz`, `admissions.csv.gz`, `transfers.csv.gz`, `labevents.csv.gz`, `procedures_icd.csv.gz`, `diagnoses_icd.csv.gz`, `d_icd_procedures.csv.gz`, and `d_icd_diagnoses.csv.gz`. For the big file `labevents.csv.gz`, use the Parquet format you generated in Homework 2. For reproducibility, make the Parquet folder `labevents_pq` available at the current working directory `hw3`, for example, by a symbolic link. Make your code reproducible.
 
+**Solution**
+
+
 ### Q1.2 ICU stays
 
 ICU stays are a subset of ADT history. This figure shows the vitals of the patient `10001217` during ICU stays. The x-axis is the calendar time, and the y-axis is the value of the vital. The color of the line represents the type of vital. The facet grid shows the abbreviation of the vital and the stay ID.
@@ -64,9 +68,10 @@ zcat < ~/mimic/icu/icustays.csv.gz | head
 ```
 
 ### Q2.1 Ingestion
-
 Import `icustays.csv.gz` as a tibble `icustays_tble`. 
+```{r}
 
+```
 ### Q2.2 Summary and visualization
 
 How many unique `subject_id`? Can a `subject_id` have multiple ICU stays? Summarize the number of ICU stays per `subject_id` by graphs. 
