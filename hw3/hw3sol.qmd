@@ -49,11 +49,79 @@ Do a similar visualization for the patient with `subject_id` 10063848 using ggpl
 Hint: We need to pull information from data files `patients.csv.gz`, `admissions.csv.gz`, `transfers.csv.gz`, `labevents.csv.gz`, `procedures_icd.csv.gz`, `diagnoses_icd.csv.gz`, `d_icd_procedures.csv.gz`, and `d_icd_diagnoses.csv.gz`. For the big file `labevents.csv.gz`, use the Parquet format you generated in Homework 2. For reproducibility, make the Parquet folder `labevents_pq` available at the current working directory `hw3`, for example, by a symbolic link. Make your code reproducible.
 
 **Solution**
-```{r}
-
-
+```{bash}
+#| eval: false
+gunzip -c ~/mimic/hosp/labevents.csv.gz > labevents.csv
 ```
 
+```{r}
+sid <- 10063848
+# Load data
+patients <- read_csv("~/mimic/hosp/patients.csv.gz") |>
+  filter(subject_id == sid) |>
+
+admissions <- read_csv("~/mimic/hosp/admissions.csv.gz") |>
+  filter(subject_id == sid) |>
+  
+transfers <- read_csv("~/mimic/hosp/transfers.csv.gz") |>
+  filter(subject_id == sid) |>
+
+procedures_icd <- read_csv("~/mimic/hosp/procedures_icd.csv.gz") |>
+  filter(subject_id == sid) |>
+  left_join(read_csv("~/mimic/hosp/d_icd_procedures.csv.gz", 
+            show_col_types = FALSE), by = c("icd_code", "icd_version")) |>
+  
+diagnoses_icd <- read_csv("~/mimic/hosp/diagnoses_icd.csv.gz") |> 
+  filter(subject_id == sid) |>
+  left_join(read_csv("~/mimic/hosp/d_icd_diagnoses.csv.gz", 
+            show_col_types = FALSE), by = c("icd_code", "icd_version")) |>
+
+labevents_parquet <- "labevents_parquet"
+write_dataset(open_dataset("labevents.csv", format = "csv"), 
+              path = labevents_parquet, format = "parquet")
+parquet_ds <- open_dataset(labevents_parquet, format = "parquet")
+labevents <- parquet_ds |>
+  filter(subject_id == sid) |>
+  collect()
+
+# Create plot
+transfers <- transfers |>
+  mutate(intime = as.POSIXct(intime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+         outtime = as.POSIXct(outtime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"))
+
+labevents <- labevents |>
+  mutate(charttime = as.POSIXct(charttime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"))
+
+procedures_icd <- procedures_icd |>
+  mutate(chartdate = as.POSIXct(chartdate, format = "%Y-%m-%d", tz = "UTC"))
+
+race <- if("race" %in% colnames(admissions)) tolower(admissions$race) else "unknown"
+unique_careunits <- unique(transfers$careunit)
+
+ggplot() +
+  geom_segment(data = transfers, 
+               aes(x = intime, xend = outtime, y = "ADT", yend = "ADT", color = careunit), 
+               size = 3) +
+  geom_point(data = labevents, aes(x = charttime, y = "Lab"), shape = 3, size = 3) +
+  geom_point(data = procedures_icd, aes(x = chartdate, y = "Procedure", shape = long_title), size = 4) +
+  labs(
+    title = paste("Patient", sid, ",", patients$gender, ",", patients$anchor_age, "years old,", race),
+    subtitle = paste(diagnoses_icd$long_title, collapse = "\\n"),
+    x = "Calendar Time",
+    y = NULL
+  ) +
+  scale_color_manual(name = "Care Unit", values = scales::hue_pal()(length(unique_careunits))) +
+  scale_shape_manual(name = "Procedure", values = c(16, 17, 15, 14, 13)) +
+  theme_minimal() +
+ theme(
+    legend.position = "bottom",  
+    legend.box = "horizontal",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 9),
+    legend.key.size = unit(0.3, "cm")
+  ) +
+  guides(color = guide_legend(nrow = 6), shape = guide_legend(nrow = 5))
+```
 ### Q1.2 ICU stays
 
 ICU stays are a subset of ADT history. This figure shows the vitals of the patient `10001217` during ICU stays. The x-axis is the calendar time, and the y-axis is the value of the vital. The color of the line represents the type of vital. The facet grid shows the abbreviation of the vital and the stay ID.
@@ -61,6 +129,13 @@ ICU stays are a subset of ADT history. This figure shows the vitals of the patie
 ![](10001217_icu.png)
 
 Do a similar visualization for the patient `10063848`.
+
+**Solution**
+```{r}
+
+
+
+```
 
 ## Q2. ICU stays
 
