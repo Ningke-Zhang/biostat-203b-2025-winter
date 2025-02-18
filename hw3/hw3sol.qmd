@@ -58,23 +58,23 @@ gunzip -c ~/mimic/hosp/labevents.csv.gz > labevents.csv
 sid <- 10063848
 # Load data
 patients <- read_csv("~/mimic/hosp/patients.csv.gz") |>
-  filter(subject_id == sid) |>
+  filter(subject_id == sid)
 
 admissions <- read_csv("~/mimic/hosp/admissions.csv.gz") |>
-  filter(subject_id == sid) |>
+  filter(subject_id == sid)
   
 transfers <- read_csv("~/mimic/hosp/transfers.csv.gz") |>
-  filter(subject_id == sid) |>
+  filter(subject_id == sid)
 
 procedures_icd <- read_csv("~/mimic/hosp/procedures_icd.csv.gz") |>
   filter(subject_id == sid) |>
   left_join(read_csv("~/mimic/hosp/d_icd_procedures.csv.gz", 
-            show_col_types = FALSE), by = c("icd_code", "icd_version")) |>
+            show_col_types = FALSE), by = c("icd_code", "icd_version"))
   
 diagnoses_icd <- read_csv("~/mimic/hosp/diagnoses_icd.csv.gz") |> 
   filter(subject_id == sid) |>
   left_join(read_csv("~/mimic/hosp/d_icd_diagnoses.csv.gz", 
-            show_col_types = FALSE), by = c("icd_code", "icd_version")) |>
+            show_col_types = FALSE), by = c("icd_code", "icd_version"))
 
 labevents_parquet <- "labevents_parquet"
 write_dataset(open_dataset("labevents.csv", format = "csv"), 
@@ -87,8 +87,8 @@ labevents <- parquet_ds |>
 # Create plot
 transfers <- transfers |>
   mutate(intime = as.POSIXct(intime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-         outtime = as.POSIXct(outtime, 
-                              format = "%Y-%m-%d %H:%M:%S", tz = "UTC"))
+    outtime = as.POSIXct(outtime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")) |>
+  filter(outtime > intime)
 
 labevents <- labevents |>
   mutate(charttime = as.POSIXct(charttime, 
@@ -140,8 +140,9 @@ Do a similar visualization for the patient `10063848`.
 
 **Solution**
 ```{r}
-
-
+icu <- read_csv("~/mimic/icu/icustays.csv.gz", 
+                    show_col_types = FALSE) |>
+  filter(subject_id == sid) 
 
 ```
 
