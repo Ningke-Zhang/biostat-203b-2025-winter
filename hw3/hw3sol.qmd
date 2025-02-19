@@ -139,11 +139,57 @@ ICU stays are a subset of ADT history. This figure shows the vitals of the patie
 Do a similar visualization for the patient `10063848`.
 
 **Solution**
-```{r}
-icu <- read_csv("~/mimic/icu/icustays.csv.gz", 
-                    show_col_types = FALSE) |>
-  filter(subject_id == sid) 
+```{bash}
+#| eval: false
+gunzip -c ~/mimic/icu/chartevents.csv.gz > chartevents.csv
+```
 
+```{r}
+# Load data
+chartevents_parquet <- "chartevents_parquet"
+
+write_dataset(open_dataset("chartevents.csv", format = "csv"), 
+              path = chartevents_parquet, format = "parquet")
+parquet_ds <- open_dataset(chartevents_parquet, format = "parquet")
+chartevents <- parquet_ds |>
+  filter(subject_id == sid) |>
+  select(subject_id, stay_id, charttime, itemid, value, valuenum) |>
+  collect()
+  
+head(chartevents, 10)
+
+d_items <- read_csv("~/mimic/icu/d_items.csv.gz") |>
+  select(itemid, label, abbreviation) |>
+  print(width = Inf)
+
+chartevents <- chartevents |>
+  left_join(d_items, by = "itemid") |>
+  filter(abbreviation %in% c("HR", "NBPd", "NBPs", "RR", "Temperature F")) |>
+  print(width = Inf)
+
+chartevents <- chartevents |>
+  mutate(charttime = 
+           as.POSIXct(charttime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"))
+
+# Create plot
+ggplot(chartevents, aes(x = charttime, y = valuenum, color = abbreviation)) +
+  geom_line(size = 1) +
+  geom_point(size = 2, alpha = 0.7) +
+  facet_grid(rows = vars(abbreviation), c
+             ols = vars(stay_id), scales = "free_y") +
+  scale_x_datetime(date_breaks = "12 hours", date_labels = "%b %d %H:%M") +
+  labs(
+    title = paste("Patient", sid, "- ICU Vitals"),
+    x = "Calendar Time",
+    y = "Vital Value",
+    color = "Vital Type"
+  ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom" 
+  )
 ```
 
 ## Q2. ICU stays
@@ -155,12 +201,45 @@ zcat < ~/mimic/icu/icustays.csv.gz | head
 
 ### Q2.1 Ingestion
 Import `icustays.csv.gz` as a tibble `icustays_tble`. 
+**Solution**
 ```{r}
-
+icustays_tble <- read_csv("~/mimic/icu/icustays.csv.gz")
+head(icustays_tble)
 ```
 ### Q2.2 Summary and visualization
 
-How many unique `subject_id`? Can a `subject_id` have multiple ICU stays? Summarize the number of ICU stays per `subject_id` by graphs. 
+How many unique `subject_id`? Can a `subject_id` have multiple ICU stays? Summarize the number of ICU stays per `subject_id` by graphs.
+**Solution**
+There are 65366 unique `subject_id` in the `icustays` table. Among them, 16242 patients have multiple ICU stays.
+```{r}
+# Count unique subject_id
+num_unique_subjects <- icustays_tble |>
+  distinct(subject_id) |>
+  nrow()
+print(paste("Number of unique subject_id:", num_unique_subjects))
+
+# Count ICU stays per subject_id
+icu_stay_counts <- icustays_tble |>
+  group_by(subject_id) |>
+  summarise(num_stays = n(), .groups = "drop")
+# Check for multiple ICU stays
+multi_stay_patients <- icu_stay_counts |>
+  filter(num_stays > 1) |>
+  nrow()
+print(paste("Number of patients with multiple ICU stays:", 
+            multi_stay_patients))
+
+# Create plot
+ggplot(icu_stay_counts, aes(x = num_stays)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", 
+                 color = "white", alpha = 0.7) +
+  labs(
+    title = "Distribution of ICU Stays per Patient",
+    x = "Number of ICU Stays",
+    y = "Number of Patients"
+  ) +
+  theme_minimal()
+```
 
 ## Q3. `admissions` data
 
@@ -173,6 +252,11 @@ zcat < ~/mimic/hosp/admissions.csv.gz | head
 
 Import `admissions.csv.gz` as a tibble `admissions_tble`.
 
+**Solution**
+```{r}
+admissions_tble <- read_csv("~/mimic/hosp/admissions.csv.gz")
+head(admissions_tble)
+```
 ### Q3.2 Summary and visualization
 
 Summarize the following information by graphics and explain any patterns you see.
@@ -185,6 +269,81 @@ Summarize the following information by graphics and explain any patterns you see
 According to the [MIMIC-IV documentation](https://mimic.mit.edu/docs/iv/about/concepts/#date-shifting), 
 
 > All dates in the database have been shifted to protect patient confidentiality. Dates will be internally consistent for the same patient, but randomly distributed in the future. Dates of birth which occur in the present time are not true dates of birth. Furthermore, dates of birth which occur before the year 1900 occur if the patient is older than 89. In these cases, the patient’s age at their first admission has been fixed to 300.
+
+**Solution**
+The majority of patients have only one hospital admission, and some patients have multiple readmissions.
+Peak admissions occur between 3 PM - 6 PM. Notable spikes at midnight and 7 AM may be due to shift changes or scheduled surgeries.
+There are clear spikes at 00, 15, 30, and 45 minutes. This may be due to rounding or scheduling.
+Most patients stay 1-3 days in the hospital. There are a few outliers with very long stays, which may be due to critical conditions.
+```{r}
+# Number of admissions per patient
+admission_counts <- admissions_tble |>
+  group_by(subject_id) |>
+  summarise(num_admissions = n(), .groups = "drop")
+summary(admission_counts$num_admissions)
+
+ggplot(admission_counts, aes(x = num_admissions)) +
+  geom_histogram(binwidth = 1, 
+                 fill = "steelblue", color = "black", alpha = 0.7) +
+  scale_x_continuous(breaks = seq(1, max(admission_counts$num_admissions), 
+                                  by = 1)) +
+  labs(
+    title = "Distribution of Admissions per Patient",
+    x = "Number of Admissions",
+    y = "Number of Patients"
+  ) +
+  theme_minimal()
+
+# Admission hour
+admissions_tble <- admissions_tble |>
+  mutate(admit_hour = lubridate::hour(admittime))
+summary(admissions_tble$admit_hour)
+
+ggplot(admissions_tble, aes(x = admit_hour)) +
+  geom_histogram(binwidth = 1, fill = "darkorange", 
+                 color = "black", alpha = 0.8) +
+  scale_x_continuous(breaks = seq(0, 23, by = 1)) +
+  labs(
+    title = "Distribution of Admission Hours",
+    x = "Admission Hour (24-hour format)",
+    y = "Number of Admissions"
+  ) +
+  theme_minimal()
+
+# Admission minute
+admissions_tble <- admissions_tble |>
+  mutate(admit_minute = lubridate::minute(admittime))
+summary(admissions_tble$admit_minute)
+
+ggplot(admissions_tble, aes(x = admit_minute)) +
+  geom_histogram(binwidth = 1, fill = "purple", color = "black", alpha = 0.8) +
+  scale_x_continuous(breaks = seq(0, 59, by = 5)) +
+  labs(
+    title = "Distribution of Admission Minutes",
+    x = "Admission Minute",
+    y = "Number of Admissions"
+  ) +
+  theme_minimal()
+
+# Length of hospital stay
+admissions_tble <- admissions_tble |>
+  mutate(
+    length_of_stay = as.numeric(difftime(dischtime, admittime, units = "days"))
+  )
+summary(admissions_tble$length_of_stay)
+
+ggplot(admissions_tble, aes(x = length_of_stay)) +
+  geom_histogram(binwidth = 1, fill = "red", color = "black", alpha = 0.7) +
+  scale_x_continuous(
+    limits = c(0, quantile(admissions_tble$length_of_stay, 0.99))) +
+  labs(
+    title = "Distribution of Hospital Length of Stay",
+    x = "Length of Stay (Days)",
+    y = "Number of Admissions"
+  ) +
+  theme_minimal()
+```
+
 
 ## Q4. `patients` data
 
