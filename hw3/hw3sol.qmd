@@ -175,8 +175,8 @@ chartevents <- chartevents |>
 ggplot(chartevents, aes(x = charttime, y = valuenum, color = abbreviation)) +
   geom_line(size = 1) +
   geom_point(size = 2, alpha = 0.7) +
-  facet_grid(rows = vars(abbreviation), c
-             ols = vars(stay_id), scales = "free_y") +
+  facet_grid(rows = vars(abbreviation), 
+             cols = vars(stay_id), scales = "free_y") +
   scale_x_datetime(date_breaks = "12 hours", date_labels = "%b %d %H:%M") +
   labs(
     title = paste("Patient", sid, "- ICU Vitals"),
@@ -422,23 +422,25 @@ Hint: Use the Parquet format you generated in Homework 2. For reproducibility, m
 **Solution**
 
 ```{r}
+icustays_tble <- read_csv("~/mimic/icu/icustays.csv.gz") |>
+  select(subject_id, stay_id, intime) |>
+  print(width = Inf)
 head(icustays_tble)
 
-labevents_parquet <- "labevents_parquet"
 labevents_tble <- open_dataset(labevents_parquet, format = "parquet") |>
   select(subject_id, itemid, storetime, valuenum) |>
-  filter(itemid %in% c(50912, 50971, 50983, 50902, 50882, 51221, 51301, 50931)) |>
+  filter(itemid %in% 
+           c(50912, 50971, 50983, 50902, 50882, 51221, 51301, 50931)) |>
   collect()
 
 labevents_tble <- labevents_tble |> 
-  inner_join(icustays_tble, by = "subject_id") |>
+  inner_join(icustays_tble, by = "subject_id","stay_id") |>
   filter(storetime < intime) |>
   group_by(subject_id, stay_id, itemid) |>
   arrange(storetime, .by_group = TRUE) |>
   slice(n()) |>
   ungroup() |>
-  select(-c(storetime, intime)) |>
-  print(width = Inf)
+  select(-c(storetime, intime))
 
 labevents_tble_final <- labevents_tble |>
   spread(key = itemid, value = valuenum) |>
@@ -451,8 +453,6 @@ labevents_tble_final <- labevents_tble |>
          wbc ="51301",
          glucose ="50931") |>
   print(width = Inf)
-
-
 ```
 
 ## Q6. Vitals from charted events
@@ -472,6 +472,33 @@ We are interested in the vitals for ICU patients: heart rate (220045), systolic 
 ![](chartevents_tble.png)
 
 Hint: Use the Parquet format you generated in Homework 2. For reproducibility, make `chartevents_pq` folder available at the current working directory, for example, by a symbolic link.
+
+**Solution**
+```{r}
+chartevents_parquet <- "chartevents_parquet"
+chartevents_tble <- open_dataset(chartevents_parquet, format = "parquet") |>
+  select(subject_id, itemid, stay_id, storetime, valuenum) |>
+  filter(itemid %in% c(220045, 220179, 220180, 223761, 220210)) |>
+  collect()
+
+chartevents_tble <- chartevents_tble |>
+  inner_join(icustays_tble, by = c("subject_id", "stay_id")) |>
+  filter(storetime > intime) |>
+  group_by(subject_id, stay_id, itemid) |>
+  arrange(storetime, .by_group = TRUE) |>
+  slice(1) |>
+  ungroup() |>
+  select(-c(storetime, intime))
+
+chartevents_tble <- chartevents_tble |>
+  spread(key = itemid, value = valuenum) |>
+  rename(heart_rate = "220045",
+         non_invasive_blood_pressure_systolic = "220179",
+         non_invasive_blood_pressure_diastolic = "220180",
+         respiratory_rate = "220210",
+         temperature_fahrenheit = "223761") |>
+  print(width = Inf)
+```
 
 ## Q7. Putting things together
 
