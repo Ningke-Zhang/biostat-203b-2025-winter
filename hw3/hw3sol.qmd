@@ -513,16 +513,58 @@ Let us create a tibble `mimic_icu_cohort` for all ICU stays, where rows are all 
 The final `mimic_icu_cohort` should have one row per ICU stay and columns for each variable.
 
 ![](mimic_icu_cohort.png)
+**Solution**
+```{r}
+icustays_tble_q7 <-  read_csv("~/mimic/icu/icustays.csv.gz")
+head(icustays_tble_q7)
+head(admissions_tble)
+head(patients_tble)
+head(labevents_tble)
+head(chartevents_tble)
+
+labevents_tble <- labevents_tble |>
+  group_by(stay_id) |>
+  slice(1) |>
+  ungroup()
+
+chartevents_tble <- chartevents_tble |>
+  group_by(stay_id) |>
+  slice(1) |>
+  ungroup()
+
+mimic_icu_cohort <- icustays_tble_q7 |>
+  left_join(admissions_tble, by = c("subject_id", "hadm_id")) |>
+  left_join(patients_tble, by = "subject_id") |>
+  mutate(intime_age = anchor_age + year(intime) - anchor_year) |>
+  filter(intime_age >= 18) |>
+  left_join(labevents_tble, by = "stay_id") |>
+  left_join(chartevents_tble, by = "stay_id") |>
+  distinct() |>
+  print(width = Inf)
+```
+
 
 ## Q8. Exploratory data analysis (EDA)
 
 Summarize the following information about the ICU stay cohort `mimic_icu_cohort` using appropriate numerics or graphs:
 
 - Length of ICU stay `los` vs demographic variables (race, insurance, marital_status, gender, age at intime)
+**Solution**
+```{r}
 
+```
 - Length of ICU stay `los` vs the last available lab measurements before ICU stay
+**Solution**
+```{r}
 
+```
 - Length of ICU stay `los` vs the first vital measurements within the ICU stay
+**Solution**
+```{r}
 
+```
 - Length of ICU stay `los` vs first ICU unit
+**Solution**
+```{r}
 
+```
