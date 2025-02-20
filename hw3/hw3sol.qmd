@@ -356,10 +356,50 @@ zcat < ~/mimic/hosp/patients.csv.gz | head
 
 Import `patients.csv.gz` (<https://mimic.mit.edu/docs/iv/modules/hosp/patients/>) as a tibble `patients_tble`.
 
+**Solution**
+```{r}
+patients_tble <- read_csv("~/mimic/hosp/patients.csv.gz")
+head(patients_tble)
+```
+
 ### Q4.2 Summary and visualization
 
 Summarize variables `gender` and `anchor_age` by graphics, and explain any patterns you see.
 
+**Solution**
+Slightly more female patients than male, this may be due to longer life expectancy for women.
+The age distribution is right-skewed, meaning more young and middle-aged patients. The largest group is 20-30 years old, but there is still a significant number of elderly patients.
+```{r}
+# Gender
+gender_counts <- patients_tble |>
+  group_by(gender) |>
+  summarise(count = n(), .groups = "drop")
+print(gender_counts)
+
+ggplot(gender_counts, aes(x = gender, y = count, fill = gender)) +
+  geom_bar(stat = "identity", color = "black", alpha = 0.8) +
+  labs(
+    title = "Gender Distribution in MIMIC-IV",
+    x = "Gender",
+    y = "Number of Patients"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Anchor Age
+summary(patients_tble$anchor_age)
+
+ggplot(patients_tble, aes(x = anchor_age)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", 
+                 color = "black", alpha = 0.7) +
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) + 
+  labs(
+    title = "Age Distribution of Patients in MIMIC-IV",
+    x = "Age (Years)",
+    y = "Number of Patients"
+  ) +
+  theme_minimal()
+```
 ## Q5. Lab results
 
 `labevents.csv.gz` (<https://mimic.mit.edu/docs/iv/modules/hosp/labevents/>) contains all laboratory measurements for patients. The first 10 lines are
@@ -378,6 +418,42 @@ We are interested in the lab measurements of creatinine (50912), potassium (5097
 
 
 Hint: Use the Parquet format you generated in Homework 2. For reproducibility, make `labevents_pq` folder available at the current working directory `hw3`, for example, by a symbolic link.
+
+**Solution**
+
+```{r}
+head(icustays_tble)
+
+labevents_parquet <- "labevents_parquet"
+labevents_tble <- open_dataset(labevents_parquet, format = "parquet") |>
+  select(subject_id, itemid, storetime, valuenum) |>
+  filter(itemid %in% c(50912, 50971, 50983, 50902, 50882, 51221, 51301, 50931)) |>
+  collect()
+
+labevents_tble <- labevents_tble |> 
+  inner_join(icustays_tble, by = "subject_id") |>
+  filter(storetime < intime) |>
+  group_by(subject_id, stay_id, itemid) |>
+  arrange(storetime, .by_group = TRUE) |>
+  slice(n()) |>
+  ungroup() |>
+  select(-c(storetime, intime)) |>
+  print(width = Inf)
+
+labevents_tble_final <- labevents_tble |>
+  spread(key = itemid, value = valuenum) |>
+  rename(creatinine ="50912",
+         potassium ="50971",
+         sodium ="50983",
+         chloride ="50902",
+         bicarbonate ="50882",
+         hematocrit ="51221",
+         wbc ="51301",
+         glucose ="50931") |>
+  print(width = Inf)
+
+
+```
 
 ## Q6. Vitals from charted events
 
