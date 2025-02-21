@@ -101,34 +101,48 @@ race <- if("race" %in% colnames(admissions))
   tolower(admissions$race) else "unknown"
 unique_careunits <- unique(transfers$careunit)
 
+icu_units <- c("Surgical Intensive Care Unit (SICU)", 
+               "Medical Intensive Care Unit (MICU)", 
+               "Coronary Care Unit (CCU)",
+               "Cardiac Vascular Intensive Care Unit (CVICU)", 
+               "Neuro Surgical Intensive Care Unit (Neuro SICU)")
+
+transfers <- transfers |>
+  mutate(is_icu = ifelse(careunit %in% icu_units, "ICU", "Non-ICU"))
+
+
 ggplot() +
-  geom_segment(data = transfers, 
-               aes(x = intime, xend = outtime, y = "ADT", 
-                   yend = "ADT", color = careunit), 
-               size = 3) +
-  geom_point(data = labevents, aes(x = charttime, y = "Lab"), 
-             shape = 3, size = 3) +
   geom_point(data = procedures_icd, aes(x = chartdate, y = "Procedure", 
                                         shape = long_title), size = 4) +
+  geom_point(data = labevents, aes(x = charttime, y = "Lab"), 
+             shape = 3, size = 3) +
+  geom_segment(data = transfers, 
+               aes(x = intime, xend = outtime, y = "ADT", 
+                   yend = "ADT", color = careunit, size = is_icu)) +
   labs(
     title = paste("Patient", sid, ",", patients$gender, ",", 
                   patients$anchor_age, "years old,", race),
-    subtitle = paste(diagnoses_icd$long_title, collapse = "\\n"),
+    subtitle = str_c(str_to_lower(diagnoses_icd$long_title[1:3]), 
+                     collapse = "\n"),
     x = "Calendar Time",
     y = NULL
   ) +
   scale_color_manual(name = "Care Unit", 
                      values = scales::hue_pal()(length(unique_careunits))) +
   scale_shape_manual(name = "Procedure", values = c(16, 17, 15, 14, 13)) +
+  scale_size_manual(values = c("ICU" = 6, "Non-ICU" = 2)) +
+  scale_y_discrete(limits = c("Procedure", "Lab", "ADT")) +
   theme_minimal() +
- theme(
+  theme(
     legend.position = "bottom",  
     legend.box = "horizontal",
     legend.text = element_text(size = 8),
     legend.title = element_text(size = 9),
     legend.key.size = unit(0.3, "cm")
   ) +
-  guides(color = guide_legend(nrow = 6), shape = guide_legend(nrow = 5))
+  guides(color = guide_legend(nrow = 6), 
+         shape = guide_legend(nrow = 5), 
+         size = "none")
 ```
 ### Q1.2 ICU stays
 
@@ -173,11 +187,11 @@ chartevents <- chartevents |>
 
 # Create plot
 ggplot(chartevents, aes(x = charttime, y = valuenum, color = abbreviation)) +
-  geom_line(size = 1) +
-  geom_point(size = 2, alpha = 0.7) +
-  facet_grid(rows = vars(abbreviation), 
-             cols = vars(stay_id), scales = "free_y") +
-  scale_x_datetime(date_breaks = "12 hours", date_labels = "%b %d %H:%M") +
+  geom_line(size = 0.5) +
+  geom_point(size = 1.5, alpha = 1) +
+  facet_grid(rows = vars(abbreviation), cols = vars(stay_id), 
+             scales = "free") +
+  
   labs(
     title = paste("Patient", sid, "- ICU Vitals"),
     x = "Calendar Time",
@@ -188,7 +202,7 @@ ggplot(chartevents, aes(x = charttime, y = valuenum, color = abbreviation)) +
   theme(
     strip.text = element_text(size = 12, face = "bold"),
     axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "bottom" 
+    legend.position = "bottom"
   )
 ```
 
@@ -498,6 +512,42 @@ chartevents_tble <- chartevents_tble |>
          temperature_fahrenheit = "223761") |>
   print(width = Inf)
 ```
+**Rewrite After Lec@2/20/2025**
+```{r}
+# Rewrite After Lec@2/20/2025
+d_items_tble <- read_csv("~/mimic/icu/d_items.csv.gz") |>
+  select(itemid, label, abbreviation) |>
+  mutate(itemid = as.character(itemid))
+
+# Load chartevents from Parquet and process
+chartevents_tble <- open_dataset(chartevents_parquet, format = "parquet") |>
+  to_duckdb() |>
+  select(subject_id, itemid, stay_id, storetime, valuenum) |>
+  filter(itemid %in% c(220045, 220179, 220180, 223761, 220210)) |>
+  left_join(icustays_tble, by = c("subject_id", "stay_id"), copy = TRUE) |>
+  filter(storetime > intime) |>
+  group_by(subject_id, stay_id, itemid) |>
+  slice_max(order_by = storetime, n = 1) |>
+  select(-c(storetime, intime)) |>
+  ungroup() |>
+  pivot_wider(names_from = itemid, values_from = valuenum) |>
+  collect() |>
+  arrange(subject_id, stay_id)
+
+# Rename columns based on d_items_tble mapping
+chartevents_tble <- chartevents_tble |>
+  rename_with(~ str_to_lower(d_items_tble$label[match(.x, d_items_tble$itemid)]), 
+              .cols = intersect(names(chartevents_tble), d_items_tble$itemid))  # Ensure only valid column names are matched
+
+# Fix relocate() by explicitly defining column order
+col_order <- c("subject_id", "stay_id", setdiff(names(chartevents_tble), c("subject_id", "stay_id")))
+chartevents_tble <- chartevents_tble |> 
+relocate(all_of(col_order))
+
+# Print final table
+print(chartevents_tble, width = Inf)
+            
+```
 
 ## Q7. Putting things together
 
@@ -707,7 +757,7 @@ unique(mimic_icu_cohort$first_careunit)
 
 mimic_icu_cohort |> 
   ggplot(aes(x = first_careunit, y = los)) +
-  geom_boxplot(width = 0.6, outlier.size = 0.4, outlier.alpha = 0.5) +
+  geom_boxplot(width = 0.8, outlier.size = 0.4, outlier.alpha = 0.5) +
   coord_flip() +
   labs(
     title = "Length of ICU Stay by First Care Unit",
