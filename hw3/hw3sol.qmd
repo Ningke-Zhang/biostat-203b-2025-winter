@@ -420,7 +420,6 @@ We are interested in the lab measurements of creatinine (50912), potassium (5097
 Hint: Use the Parquet format you generated in Homework 2. For reproducibility, make `labevents_pq` folder available at the current working directory `hw3`, for example, by a symbolic link.
 
 **Solution**
-
 ```{r}
 icustays_tble <- read_csv("~/mimic/icu/icustays.csv.gz") |>
   select(subject_id, stay_id, intime) |>
@@ -519,10 +518,10 @@ icustays_tble_q7 <-  read_csv("~/mimic/icu/icustays.csv.gz")
 head(icustays_tble_q7)
 head(admissions_tble)
 head(patients_tble)
-head(labevents_tble)
+head(labevents_tble_final)
 head(chartevents_tble)
 
-labevents_tble <- labevents_tble |>
+labevents_tble_q7 <- labevents_tble_final |>
   group_by(stay_id) |>
   slice(1) |>
   ungroup()
@@ -537,7 +536,7 @@ mimic_icu_cohort <- icustays_tble_q7 |>
   left_join(patients_tble, by = "subject_id") |>
   mutate(intime_age = anchor_age + year(intime) - anchor_year) |>
   filter(intime_age >= 18) |>
-  left_join(labevents_tble, by = "stay_id") |>
+  left_join(labevents_tble_q7, by = "stay_id") |>
   left_join(chartevents_tble, by = "stay_id") |>
   distinct() |>
   print(width = Inf)
@@ -551,20 +550,175 @@ Summarize the following information about the ICU stay cohort `mimic_icu_cohort`
 - Length of ICU stay `los` vs demographic variables (race, insurance, marital_status, gender, age at intime)
 **Solution**
 ```{r}
+mimic_icu_cohort <- mimic_icu_cohort |>
+  mutate(race = as.factor(race),
+         insurance = as.factor(insurance),
+         marital_status = as.factor(marital_status),
+         gender = as.factor(gender))
+# LOS vs Race
+mimic_icu_cohort |>
+  ggplot(mapping = aes(x = race, y = los)) +
+  geom_boxplot(width = 0.6, outlier.size = 0.4, outlier.alpha = 0.5) +
+  coord_flip() +
+  labs(
+    title = "Length of ICU Stay by Race",
+    x = "Race",
+    y = "Length of Stay (Days)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 8),
+    axis.text.x = element_text(size = 10),  
+    plot.title = element_text(size = 14, face = "bold"),
+    panel.grid.minor = element_blank()
+  ) +
+  scale_y_continuous(limits = c(0, quantile(mimic_icu_cohort$los, 0.99, 
+                                            na.rm = TRUE)), 
+                     oob = scales::squish)
 
+# LOS vs Insurance
+mimic_icu_cohort |>
+  ggplot(mapping = aes(x = insurance, y = los)) +
+  geom_boxplot(width = 1, outlier.size = 0.5, 
+               position = position_dodge(width = 0.5)) +
+  coord_flip() +
+  labs(
+    title = "Length of ICU Stay by Insurance",
+    x = "Insurance",
+    y = "Length of Stay (days)"
+  ) +
+  theme(
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(size = 14, face = "bold"),
+    panel.grid.minor = element_blank()
+  ) +
+  scale_y_continuous(limits = c(0, quantile(mimic_icu_cohort$los, 0.99, 
+                                            na.rm = TRUE)), 
+                   oob = scales::squish)
+
+# LOS vs Marital Status
+mimic_icu_cohort |>
+  ggplot(mapping = aes(x = marital_status, y = los)) +
+  geom_boxplot(width = 0.6, outlier.size = 0.4, outlier.alpha = 0.5) +
+  coord_flip() +
+  labs(
+    title = "Length of ICU Stay by Marital Status",
+    x = "Marital Status",
+    y = "Length of Stay (Days)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 8),
+    axis.text.x = element_text(size = 10),  
+    plot.title = element_text(size = 14, face = "bold"),
+    panel.grid.minor = element_blank()
+  ) +
+  scale_y_continuous(limits = c(0, quantile(mimic_icu_cohort$los, 0.99, 
+                                            na.rm = TRUE)), 
+                     oob = scales::squish)
+
+# LOS vs gender
+mimic_icu_cohort |> 
+  ggplot(aes(x = los, fill = gender)) + 
+  geom_histogram(position = "dodge", binwidth = 5, color = "black", alpha = 0.7) +
+  labs(title = "Length of ICU Stay by Gender",
+       x = "Length of Stay (Days)",
+       y = "Count",
+       fill = "Gender") +
+  scale_fill_manual(values = c("blue", "red")) + 
+  theme_minimal() 
+
+# LOS vs Age at Intime
+ggplot(mimic_icu_cohort, aes(x = intime_age, y = los)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(title = "Length of ICU Stay vs Age", 
+       x = "Age at ICU Admission", 
+       y = "Length of ICU Stay (Days)") +
+  theme_minimal()+
+  theme(
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(size = 14, face = "bold"),
+    panel.grid.minor = element_blank()
+  )
 ```
 - Length of ICU stay `los` vs the last available lab measurements before ICU stay
 **Solution**
 ```{r}
+library(gridExtra)
+lab_vars <- c("creatinine", "potassium", "sodium", "chloride", 
+              "bicarbonate", "hematocrit", "wbc", "glucose")
+plots <- list()
 
+for (var in lab_vars) {
+  p <- ggplot(mimic_icu_cohort, aes_string(x = var, y = "los")) +
+    geom_point(alpha = 0.3, color = "blue") +
+    geom_smooth(method = "lm", color = "red", se = FALSE) +  # Add trend line
+    labs(x = var, y = "Length of ICU Stay (LOS)", title = paste("ICU Stay vs", var)) +
+    theme_minimal()
+  
+  plots[[var]] <- p  # Store plot in list
+}
+
+mimic_icu_cohort |> 
+  pivot_longer(cols = all_of(lab_vars), names_to = "Lab Test", values_to = "Value") |> 
+  ggplot(aes(x = Value, y = los)) +
+  geom_point(alpha = 0.3, color = "blue") +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  facet_wrap(~`Lab Test`, scales = "free_x") +
+  labs(title = "ICU Stay Length vs Last Available Lab Values",
+       x = "Lab Measurement", y = "Length of ICU Stay (LOS)") +
+  theme_minimal()
 ```
 - Length of ICU stay `los` vs the first vital measurements within the ICU stay
 **Solution**
 ```{r}
+vital_vars <- c("heart_rate", "non_invasive_blood_pressure_systolic", 
+                "non_invasive_blood_pressure_diastolic", "respiratory_rate", 
+                "temperature_fahrenheit")
+plots <- list()
 
+for (var in vital_vars) {
+  p <- ggplot(mimic_icu_cohort, aes_string(x = var, y = "los")) +
+    geom_point(alpha = 0.3, color = "blue") +
+    geom_smooth(method = "lm", color = "red", se = FALSE) +  # Add trend line
+    labs(x = var, y = "Length of ICU Stay (LOS)", title = paste("ICU Stay vs", var)) +
+    theme_minimal()
+  
+  plots[[var]] <- p  # Store plot in list
+}
+
+mimic_icu_cohort |> 
+  pivot_longer(cols = all_of(vital_vars), names_to = "Vital Sign", values_to = "Value") |> 
+  ggplot(aes(x = Value, y = los)) +
+  geom_point(alpha = 0.3, color = "blue") +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  facet_wrap(~`Vital Sign`, scales = "free_x") +
+  labs(title = "ICU Stay Length vs First Vital Measurements",
+       x = "Vital Measurement", y = "Length of ICU Stay (LOS)") +
+  theme_minimal()
 ```
 - Length of ICU stay `los` vs first ICU unit
 **Solution**
 ```{r}
+unique(mimic_icu_cohort$first_careunit)
 
+mimic_icu_cohort |> 
+  ggplot(aes(x = first_careunit, y = los)) +
+  geom_boxplot(width = 0.6, outlier.size = 0.4, outlier.alpha = 0.5) +
+  coord_flip() +
+  labs(
+    title = "Length of ICU Stay by First Care Unit",
+    x = "First Care Unit",
+    y = "Length of Stay (Days)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 8),
+    axis.text.x = element_text(size = 8),  
+    plot.title = element_text(size = 14, face = "bold"),
+    panel.grid.minor = element_blank()
+  ) 
 ```
