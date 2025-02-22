@@ -3,14 +3,7 @@ title: "Biostat 203B Homework 3"
 subtitle: "Due Feb 21 @ 11:59PM"
 author: "Ningke Zhang 705834790"
 format:
-  html:
-    theme: cosmo
-    embed-resources: true
-    number-sections: false
-    toc: true
-    toc-depth: 4
-    toc-location: left
-    code-fold: false
+ pdf: default
 ---
 
 Display machine information for reproducibility:
@@ -466,6 +459,7 @@ labevents_tble_final <- labevents_tble |>
          wbc ="51301",
          glucose ="50931") |>
   print(width = Inf)
+
 ```
 
 ## Q6. Vitals from charted events
@@ -534,13 +528,14 @@ chartevents_tble <- open_dataset(chartevents_parquet, format = "parquet") |>
   collect() |>
   arrange(subject_id, stay_id)
 
-# Rename columns based on d_items_tble mapping
+# Rename columns based on d_items_tble
 chartevents_tble <- chartevents_tble |>
-  rename_with(~ str_to_lower(d_items_tble$label[match(.x, d_items_tble$itemid)]), 
-              .cols = intersect(names(chartevents_tble), d_items_tble$itemid))  # Ensure only valid column names are matched
+  rename_with(~ str_to_lower(d_items_tble$label
+                             [match(.x, d_items_tble$itemid)]), 
+            .cols = intersect(names(chartevents_tble), d_items_tble$itemid))
 
-# Fix relocate() by explicitly defining column order
-col_order <- c("subject_id", "stay_id", setdiff(names(chartevents_tble), c("subject_id", "stay_id")))
+col_order <- c("subject_id", "stay_id", 
+               setdiff(names(chartevents_tble), c("subject_id", "stay_id")))
 chartevents_tble <- chartevents_tble |> 
 relocate(all_of(col_order))
 
@@ -671,7 +666,8 @@ mimic_icu_cohort |>
 # LOS vs gender
 mimic_icu_cohort |> 
   ggplot(aes(x = los, fill = gender)) + 
-  geom_histogram(position = "dodge", binwidth = 5, color = "black", alpha = 0.7) +
+  geom_histogram(position = "dodge", binwidth = 5, 
+                 color = "black", alpha = 0.7) +
   labs(title = "Length of ICU Stay by Gender",
        x = "Length of Stay (Days)",
        y = "Count",
@@ -705,15 +701,17 @@ plots <- list()
 for (var in lab_vars) {
   p <- ggplot(mimic_icu_cohort, aes_string(x = var, y = "los")) +
     geom_point(alpha = 0.3, color = "blue") +
-    geom_smooth(method = "lm", color = "red", se = FALSE) +  # Add trend line
-    labs(x = var, y = "Length of ICU Stay (LOS)", title = paste("ICU Stay vs", var)) +
+    geom_smooth(method = "lm", color = "red", se = FALSE) +
+    labs(x = var, y = "Length of ICU Stay (LOS)", 
+         title = paste("ICU Stay vs", var)) +
     theme_minimal()
   
-  plots[[var]] <- p  # Store plot in list
+  plots[[var]] <- p
 }
 
 mimic_icu_cohort |> 
-  pivot_longer(cols = all_of(lab_vars), names_to = "Lab Test", values_to = "Value") |> 
+  pivot_longer(cols = all_of(lab_vars), 
+               names_to = "Lab Test", values_to = "Value") |> 
   ggplot(aes(x = Value, y = los)) +
   geom_point(alpha = 0.3, color = "blue") +
   geom_smooth(method = "lm", color = "red", se = FALSE) +
@@ -725,27 +723,42 @@ mimic_icu_cohort |>
 - Length of ICU stay `los` vs the first vital measurements within the ICU stay
 **Solution**
 ```{r}
-vital_vars <- c("heart_rate", "non_invasive_blood_pressure_systolic", 
-                "non_invasive_blood_pressure_diastolic", "respiratory_rate", 
-                "temperature_fahrenheit")
-plots <- list()
+mimic_icu_cohort <- mimic_icu_cohort |>
+  rename(
+    heart_rate = `heart rate`,
+    non_invasive_blood_pressure_systolic = 
+      `non invasive blood pressure systolic`,
+    non_invasive_blood_pressure_diastolic = 
+      `non invasive blood pressure diastolic`,
+    respiratory_rate = `respiratory rate`,
+    temperature_fahrenheit = `temperature fahrenheit`
+  )
 
+vital_vars <- c("heart_rate", 
+                "non_invasive_blood_pressure_systolic", 
+                "non_invasive_blood_pressure_diastolic", 
+                "respiratory_rate", 
+                "temperature_fahrenheit")
+
+plots <- list()
 for (var in vital_vars) {
   p <- ggplot(mimic_icu_cohort, aes_string(x = var, y = "los")) +
     geom_point(alpha = 0.3, color = "blue") +
-    geom_smooth(method = "lm", color = "red", se = FALSE) +  # Add trend line
-    labs(x = var, y = "Length of ICU Stay (LOS)", title = paste("ICU Stay vs", var)) +
+    geom_smooth(method = "lm", color = "red", se = FALSE) +
+    labs(x = var, y = "Length of ICU Stay (LOS)",
+         title = paste("ICU Stay vs", var)) +
     theme_minimal()
   
-  plots[[var]] <- p  # Store plot in list
+  plots[[var]] <- p
 }
 
-mimic_icu_cohort |> 
-  pivot_longer(cols = all_of(vital_vars), names_to = "Vital Sign", values_to = "Value") |> 
+mimic_icu_cohort |>
+  pivot_longer(cols = all_of(vital_vars), 
+               names_to = "Vital Sign", values_to = "Value") |>
   ggplot(aes(x = Value, y = los)) +
   geom_point(alpha = 0.3, color = "blue") +
   geom_smooth(method = "lm", color = "red", se = FALSE) +
-  facet_wrap(~`Vital Sign`, scales = "free_x") +
+  facet_wrap(~ `Vital Sign`, scales = "free_x") +
   labs(title = "ICU Stay Length vs First Vital Measurements",
        x = "Vital Measurement", y = "Length of ICU Stay (LOS)") +
   theme_minimal()
