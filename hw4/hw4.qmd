@@ -136,7 +136,33 @@ labevents_tble |> count()
 Connect to `chartevents` table and retrieve a subset that only contain subjects who appear in `icustays_tble` and the chart events listed in HW3. Only keep the first chart events (by `storetime`) during ICU stay and pivot chart events to become variables/columns. Write all steps in _one_ chain of pipes.
 ```{r}
 # # TODO
-chartevents_tble <- 
+chartevents_tble <- tbl(con_bq, "chartevents") |>
+  select(subject_id, stay_id, itemid, storetime, valuenum) |>
+  filter(itemid %in% c(220045, 220179, 
+                        220180, 223761, 
+                        220210)) |>
+  inner_join(icustays_tble, by = c("subject_id", "stay_id")) |>
+  filter(storetime >= intime & storetime <= outtime) |>
+  group_by(subject_id, stay_id, itemid) |>
+  slice_min(order_by = storetime) |>
+  ungroup() |>
+  select(-c(hadm_id, 
+            storetime, 
+            intime, 
+            outtime, 
+            first_careunit, 
+            last_careunit, 
+            los)) |>
+  pivot_wider(names_from = itemid, values_from = valuenum) |>
+  rename(heart_rate = "220045",
+         non_invasive_blood_pressure_systolic = "220179",
+         non_invasive_blood_pressure_diastolic = "220180",
+         temperature_fahrenheit = "223761",
+         respiratory_rate = "220210") |>
+# show_query() |>
+print(width = Inf)
+
+chartevents_tble |> count()
 ```
 
 ### Q1.7 Put things together
@@ -145,7 +171,16 @@ This step is similar to Q7 of HW3. Using _one_ chain of pipes `|>` to perform fo
 
 ```{r}
 # # TODO
-# mimic_icu_cohort <- 
+mimic_icu_cohort <- icustays_tble |>
+  left_join(admissions_tble, by = c("subject_id", "hadm_id")) |>
+  left_join(patients_tble, by = "subject_id") |>
+  mutate(intime_age = year(intime) - anchor_year + anchor_age) |>
+  filter(intime_age >= 18) |>
+  left_join(labevents_tble, by = c("subject_id", "stay_id")) |>
+  left_join(chartevents_tble, by = c("subject_id", "stay_id")) |>
+  collect() |>
+  arrange(subject_id, hadm_id, stay_id) |>
+  print(width = Inf)
 ```
 
 ### Q1.8 Preprocessing
@@ -155,6 +190,11 @@ Perform the following preprocessing steps. (i) Lump infrequent levels into "Othe
 Hint: Below is a numerical summary of my tibble after preprocessing:
 
 <iframe width=95% height="500" src="./mimic_icu_cohort_gtsummary.html"></iframe>
+
+```{r}
+# # TODO
+
+```
 
 ### Q1.9 Save the final tibble
 
