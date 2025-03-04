@@ -77,7 +77,10 @@ icustays_tble <- tbl(con_bq, "icustays") |>
 Connect to the `admissions` table.
 ```{r}
 # # TODO
-# admissions_tble <- 
+admissions_tble <- tbl(con_bq, "admissions") |>
+  arrange(subject_id, hadm_id) |>
+  # show_query() |>
+  print(width = Inf)
 ```
 
 ### Q1.4 `patients` data
@@ -85,7 +88,10 @@ Connect to the `admissions` table.
 Connect to the `patients` table.
 ```{r}
 # # TODO
-# patients_tble <-
+patients_tble <- tbl(con_bq, "patients") |>
+  arrange(subject_id) |>
+  # show_query() |>
+  print(width = Inf)
 ```
 
 ### Q1.5 `labevents` data
@@ -93,7 +99,36 @@ Connect to the `patients` table.
 Connect to the `labevents` table and retrieve a subset that only contain subjects who appear in `icustays_tble` and the lab items listed in HW3. Only keep the last lab measurements (by `storetime`) before the ICU stay and pivot lab items to become variables/columns. Write all steps in _one_ chain of pipes.
 ```{r}
 # # TODO
-# labevents_tble <- 
+labevents_tble <- tbl(con_bq, "labevents") |>
+  select(subject_id, itemid, storetime, valuenum) |>
+  filter(itemid %in% c(50912, 50971, 
+                       50983, 50902, 
+                       50882, 51221, 
+                       51301, 50931)) |>
+  inner_join(icustays_tble, by = "subject_id") |>
+  filter(storetime < intime) |>
+  group_by(subject_id, stay_id, itemid) |>
+  slice_max(order_by = storetime) |>
+  ungroup() |>
+  select(-c(hadm_id, 
+            storetime, 
+            intime, 
+            outtime, 
+            first_careunit, 
+            last_careunit, los)) |>
+  pivot_wider(names_from = itemid, values_from = valuenum) |>
+  rename(creatinine = "50912",
+         potassium = "50971",
+         sodium = "50983",
+         chloride = "50902",
+         bicarbonate = "50882",
+         hematocrit = "51221",
+         wbc = "51301",
+         glucose = "50931") |>
+# show_query() |>
+print(width = Inf)
+
+labevents_tble |> count()
 ```
 
 ### Q1.6 `chartevents` data
@@ -101,7 +136,7 @@ Connect to the `labevents` table and retrieve a subset that only contain subject
 Connect to `chartevents` table and retrieve a subset that only contain subjects who appear in `icustays_tble` and the chart events listed in HW3. Only keep the first chart events (by `storetime`) during ICU stay and pivot chart events to become variables/columns. Write all steps in _one_ chain of pipes.
 ```{r}
 # # TODO
-# chartevents_tble <- 
+chartevents_tble <- 
 ```
 
 ### Q1.7 Put things together
