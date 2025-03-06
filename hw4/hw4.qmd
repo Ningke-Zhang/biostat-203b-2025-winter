@@ -30,6 +30,7 @@ library(DBI)
 library(gt)
 library(gtsummary)
 library(tidyverse)
+library(forcats)
 ```
 
 ## Q1. Compile the ICU cohort in HW3 from the Google BigQuery database 
@@ -185,7 +186,11 @@ mimic_icu_cohort <- icustays_tble |>
 
 ### Q1.8 Preprocessing
 
-Perform the following preprocessing steps. (i) Lump infrequent levels into "Other" level for `first_careunit`, `last_careunit`, `admission_type`, `admission_location`, and `discharge_location`. (ii) Collapse the levels of `race` into `ASIAN`, `BLACK`, `HISPANIC`, `WHITE`, and `Other`. (iii) Create a new variable `los_long` that is `TRUE` when `los` is greater than or equal to 2 days. (iv) Summarize the data using `tbl_summary()`, stratified by `los_long`. Hint: `fct_lump_n` and `fct_collapse` from the `forcats` package are useful.
+Perform the following preprocessing steps.
+(i) Lump infrequent levels into "Other" level for `first_careunit`, `last_careunit`, `admission_type`, `admission_location`, and `discharge_location`. 
+(ii) Collapse the levels of `race` into `ASIAN`, `BLACK`, `HISPANIC`, `WHITE`, and `Other`. 
+(iii) Create a new variable `los_long` that is `TRUE` when `los` is greater than or equal to 2 days. 
+(iv) Summarize the data using `tbl_summary()`, stratified by `los_long`. Hint: `fct_lump_n` and `fct_collapse` from the `forcats` package are useful.
 
 Hint: Below is a numerical summary of my tibble after preprocessing:
 
@@ -193,6 +198,49 @@ Hint: Below is a numerical summary of my tibble after preprocessing:
 
 ```{r}
 # # TODO
+mimic_icu_cohort <- mimic_icu_cohort |>
+  mutate(first_careunit = fct_lump_n(first_careunit, n = 4, 
+                                   other_level = "Other"),
+         last_careunit = fct_lump_n(last_careunit, n = 4, 
+                                  other_level = "Other"),
+         admission_type = fct_lump_n(admission_type, n = 4, 
+                                   other_level = "Other"),
+         admission_location = fct_lump_n(admission_location, n = 4, 
+                                       other_level = "Other"),
+         discharge_location = fct_lump(discharge_location, n = 4, 
+                                       other_level = "Other"),
+  race = as.character(race),
+  race = case_when(
+    str_detect(race, regex("ASIAN", ignore_case = TRUE)) ~ "ASIAN",
+    str_detect(race, regex("BLACK|AFRICAN", ignore_case = TRUE)) ~ "BLACK",
+    str_detect(race, regex("HISPANIC|LATINO", ignore_case = TRUE)) ~ "HISPANIC",
+    str_detect(race, regex("WHITE", ignore_case = TRUE)) ~ "WHITE",
+    TRUE ~ "Other"),
+  los_long = los >= 2) |>
+  print(width = Inf)
+
+mimic_icu_cohort |>
+    select(-c(subject_id, 
+            hadm_id, 
+            stay_id,
+            intime, 
+            outtime, 
+            admittime,
+            dischtime,
+            deathtime,
+            admit_provider_id,
+            edregtime,
+            edouttime,
+            anchor_age,
+            anchor_year,
+            anchor_year_group)
+         ) |>
+  tbl_summary(
+    by = los_long,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} / {N} ({p}%)")
+  )
+
 
 ```
 
