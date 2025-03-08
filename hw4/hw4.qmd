@@ -198,6 +198,7 @@ Hint: Below is a numerical summary of my tibble after preprocessing:
 
 ```{r}
 # # TODO
+
 mimic_icu_cohort <- mimic_icu_cohort |>
   mutate(first_careunit = fct_lump_n(first_careunit, n = 4, 
                                    other_level = "Other"),

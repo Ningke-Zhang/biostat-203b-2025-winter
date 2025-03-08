@@ -2,9 +2,10 @@ library(shiny)
 library(tidyverse)
 library(dplyr)
 library(bigrquery)
+library(shinythemes)
 
 # Load data
-mimic_icu_cohort <- readRDS("/Users/ningkezhang/Downloads/203b-hw-revised/hw4/mimiciv_shiny/mimic_icu_cohort.rds") |>
+mimic_icu_cohort <- readRDS("mimic_icu_cohort.rds") |>
   mutate(insurance = as.factor(insurance),
          marital_status = as.factor(marital_status),
          gender = as.factor(gender))
@@ -48,6 +49,7 @@ items <- tbl(con_bq, "d_items") |>
 
 # Define UI
 ui <- fluidPage(
+  theme = shinytheme("superhero"),
   titlePanel("MIMIC-IV ICU Cohort"),
   
   #first tab
@@ -80,7 +82,7 @@ ui <- fluidPage(
     ),
     
     #second tab
-    tabPanel("patient's ADT and ICU stay information",
+    tabPanel("Patient's ADT and ICU stay information",
              sidebarLayout(
                sidebarPanel(
                  selectInput("PatientID", "Patient ID", choices = patient_id),
@@ -184,23 +186,32 @@ server <- function(input, output) {
       geom_segment(data = sid_adt |> filter(eventtype != "discharge"),
                    aes(x = intime, xend = outtime, y = "ADT", yend = "ADT", 
                        color = careunit, 
-                       linewidth = str_detect(careunit, "(ICU|CCU)"))) +
+                       linewidth = str_detect(careunit, "(ICU|CCU)")),
+      show.legend = c(linewidth = FALSE)) +
       geom_point(data = sid_lab |> distinct(charttime, .keep_all = TRUE),
                  aes(x = charttime, y = "Lab"), shape = '+', size = 5) +
       geom_jitter(data = sid_proc, aes(
         x = chartdate + hours(12), y = "Procedure", 
-                                       shape = str_sub(long_title, 1, 25)), 
-                  size = 3, height = 0) +
+        shape = str_sub(long_title, 1, 25)), 
+        size = 3, height = 0) +
       labs(
         title = paste("Patient", input$PatientID, ",", 
                       patient_info$gender, ",", 
                       patient_info$anchor_age, "years old,", patient_info$race),
-        subtitle = str_c(str_to_lower(sid_diag$long_title[1:3]), collapse = "\n"),
+        subtitle = str_c(str_to_lower(head(unique(sid_diag$long_title), 3)), 
+                         collapse = "\n"),
         x = "Calendar Time",
         y = NULL
       ) +
       theme_light() +
-      theme(legend.position = "bottom", legend.box = "vertical")
+      theme(
+        legend.position = "bottom", 
+        legend.box = "vertical"
+      ) +
+      guides(
+        color = guide_legend(title = "Care Unit"),
+        shape = guide_legend(title = "Procedure")
+      )
   })
   
   output$vitals_line_plot <- renderPlot({
