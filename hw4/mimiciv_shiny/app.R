@@ -9,17 +9,19 @@ mimic_icu_cohort <- readRDS("/Users/ningkezhang/Downloads/203b-hw-revised/hw4/mi
          marital_status = as.factor(marital_status),
          gender = as.factor(gender))
 
+
 # Establish BigQuery connection
 satoken <- "biostat-203b-2025-winter-4e58ec6e5579.json"
+# BigQuery authentication using service account
 bq_auth(path = satoken)
-
+# connect to the BigQuery database `biostat-203b-2025-mimiciv_3_1`
 con_bq <- dbConnect(
   bigrquery::bigquery(),
   project = "biostat-203b-2025-winter",
   dataset = "mimiciv_3_1",
   billing = "biostat-203b-2025-winter"
 )
-con_bq
+
 
 # Load required tables
 sid_adt <- tbl(con_bq, "transfers")
@@ -30,11 +32,19 @@ sid_proc <- tbl(con_bq, "procedures_icd") |>
 d_icd_diagnoses <- tbl(con_bq, "d_icd_diagnoses")
 sid_diag <- tbl(con_bq, "diagnoses_icd") |>
   left_join(d_icd_diagnoses, by = c("icd_code", "icd_version"))
+chartevents <- tbl(con_bq, "chartevents")
 
 patient_id <- mimic_icu_cohort |>
   select(subject_id) |>
   collect() |>
   pull(subject_id)
+
+items <- tbl(con_bq, "d_items") |>
+  select(itemid, label, abbreviation) |>
+  filter(abbreviation %in% c("HR", "NBPd", 
+                             "NBPs", "RR", 
+                             "Temperature F")) |>
+  collect()
 
 # Define UI
 ui <- fluidPage(
@@ -76,7 +86,8 @@ ui <- fluidPage(
                  selectInput("PatientID", "Patient ID", choices = patient_id)
                ),
                mainPanel(
-                 plotOutput("adt_icu")
+                 plotOutput("adt_icu"),
+                 plotOutput("vitals_line_plot")
                )
              )
     )
@@ -93,18 +104,24 @@ server <- function(input, output) {
     if(variable %in% c("labevents", "chartevents")) {
       data <- if(variable == "labevents") {
         mimic_icu_cohort |>
-          select(potassium, sodium, glucose, creatinine, bicarbonate, chloride) |>
-          pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
+          select(
+            potassium, sodium, glucose, creatinine, bicarbonate, chloride) |>
+          pivot_longer(
+            cols = everything(), names_to = "variable", values_to = "value")
       } else {
         mimic_icu_cohort |>
-          select(`respiratory rate`, `heart rate`, `non invasive blood pressure systolic`, 
-                 `non invasive blood pressure diastolic`, `temperature fahrenheit`) |>
-          pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
+          select(`respiratory rate`, `heart rate`, 
+                 `non invasive blood pressure systolic`, 
+                 `non invasive blood pressure diastolic`, 
+                 `temperature fahrenheit`) |>
+          pivot_longer(cols = everything(), 
+                       names_to = "variable", values_to = "value")
       }
       
       data |>
         ggplot(aes(x = value, y = variable)) +
-        geom_boxplot(notch = TRUE, outlier.shape = ifelse(input$remove, NA, 16)) +
+        geom_boxplot(notch = TRUE, 
+                     outlier.shape = ifelse(input$remove, NA, 16)) +
         theme_minimal()
     } else {
       mimic_icu_cohort |>
@@ -122,11 +139,11 @@ server <- function(input, output) {
     if(variable %in% c("labevents", "chartevents")) {
       summary(mimic_icu_cohort |> 
                 select(any_of(c("potassium", "sodium", "glucose", 
-                                                   "creatinine", "bicarbonate", "chloride", 
-                                                   "respiratory rate", "heart rate", 
-                                                   "non invasive blood pressure systolic", 
-                                                   "non invasive blood pressure diastolic", 
-                                                   "temperature fahrenheit"))))
+                                "creatinine", "bicarbonate", "chloride", 
+                                "respiratory rate", "heart rate", 
+                                "non invasive blood pressure systolic", 
+                                "non invasive blood pressure diastolic", 
+                                "temperature fahrenheit"))))
     } else {
       summary(mimic_icu_cohort |> 
                 select(any_of(variable)))
@@ -153,21 +170,59 @@ server <- function(input, output) {
     sid_diag <- h3_list$sid_diag
     
     ggplot() +
-      geom_segment(data = sid_adt %>% filter(eventtype != "discharge"),
+      geom_segment(data = sid_adt |> filter(eventtype != "discharge"),
                    aes(x = intime, xend = outtime, y = "ADT", yend = "ADT", 
-                       color = careunit, linewidth = str_detect(careunit, "(ICU|CCU)"))) +
-      geom_point(data = sid_lab %>% distinct(charttime, .keep_all = TRUE),
+                       color = careunit, 
+                       linewidth = str_detect(careunit, "(ICU|CCU)"))) +
+      geom_point(data = sid_lab |> distinct(charttime, .keep_all = TRUE),
                  aes(x = charttime, y = "Lab"), shape = '+', size = 5) +
-      geom_jitter(data = sid_proc, aes(x = chartdate + hours(12), y = "Procedure", 
+      geom_jitter(data = sid_proc, aes(
+        x = chartdate + hours(12), y = "Procedure", 
                                        shape = str_sub(long_title, 1, 25)), 
                   size = 3, height = 0) +
       theme_light() +
       theme(legend.position = "bottom", legend.box = "vertical")
   })
-  
+  output$vitals_line_plot <- renderPlot({
+    req(input$PatientID)
+    
+    patient_id <- as.numeric(input$PatientID)
+    
+    chartevents <- chartevents |>
+      filter(subject_id == patient_id) |>
+      filter(itemid %in% c(220045, 220179, 
+                           220180, 220210, 
+                           223761)) |>
+      filter(subject_id == patient_id) |>
+      
+      select(-c(hadm_id, caregiver_id, storetime, warning)) |>
+      collect() |>
+      left_join(items, by = c("itemid" = "itemid")) 
+    
+    ggplot(chartevents,
+           aes(x = charttime,
+               y = valuenum,
+               color = abbreviation)) +
+      geom_line() +
+      geom_point() +
+      
+      facet_grid(abbreviation ~ stay_id, scales = "free") +
+      labs(title = paste("Patient", 
+                         patient_id, 
+                         "ICU stays - Vitals"),
+           x = "",
+           y = "") +
+      theme_light(base_size = 9) +
+      
+      theme(legend.position = "none") +
+      guides(fill = 'none') +
+      
+      scale_x_datetime(
+        guide = guide_axis(n.dodge = 2))
+  })
 }
 
-  
+
 # Run the application 
 shinyApp(ui = ui, server = server)
   
