@@ -178,6 +178,8 @@ server <- function(input, output) {
     sid_proc <- h3_list$sid_proc
     sid_diag <- h3_list$sid_diag
     
+    patient_info <- mimic_icu_cohort |> filter(subject_id == input$PatientID)
+    
     ggplot() +
       geom_segment(data = sid_adt |> filter(eventtype != "discharge"),
                    aes(x = intime, xend = outtime, y = "ADT", yend = "ADT", 
@@ -189,6 +191,14 @@ server <- function(input, output) {
         x = chartdate + hours(12), y = "Procedure", 
                                        shape = str_sub(long_title, 1, 25)), 
                   size = 3, height = 0) +
+      labs(
+        title = paste("Patient", input$PatientID, ",", 
+                      patient_info$gender, ",", 
+                      patient_info$anchor_age, "years old,", patient_info$race),
+        subtitle = str_c(str_to_lower(sid_diag$long_title[1:3]), collapse = "\n"),
+        x = "Calendar Time",
+        y = NULL
+      ) +
       theme_light() +
       theme(legend.position = "bottom", legend.box = "vertical")
   })
