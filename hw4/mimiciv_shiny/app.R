@@ -8,7 +8,8 @@ library(shinythemes)
 mimic_icu_cohort <- readRDS("mimic_icu_cohort.rds") |>
   mutate(insurance = as.factor(insurance),
          marital_status = as.factor(marital_status),
-         gender = as.factor(gender))
+         gender = as.factor(gender)) |>
+  mutate(intime_age = anchor_age + year(intime) - anchor_year)
 
 
 # Establish BigQuery connection
@@ -66,7 +67,7 @@ ui <- fluidPage(
                                "Discharge location" = "discharge_location",
                                "Gender" = "gender",
                                "Race" = "race",
-                               "Age" = "anchor_age",
+                               "Age" = "intime_age",
                                "Age group" = "anchor_year_group",
                                "Martial status" = "marital_status",
                                "Language" = "language",
