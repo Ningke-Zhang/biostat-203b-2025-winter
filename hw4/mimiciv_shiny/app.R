@@ -83,11 +83,20 @@ ui <- fluidPage(
     tabPanel("patient's ADT and ICU stay information",
              sidebarLayout(
                sidebarPanel(
-                 selectInput("PatientID", "Patient ID", choices = patient_id)
+                 selectInput("PatientID", "Patient ID", choices = patient_id),
+                 radioButtons("plot_choice", "Select Plot to Display:",
+                              choices = c("ADT/ICU Timeline" = "adt_icu",
+                                      "Vitals Over Time" = "vitals_line_plot"),
+                              selected = "adt_icu")
                ),
                mainPanel(
-                 plotOutput("adt_icu"),
-                 plotOutput("vitals_line_plot")
+                 conditionalPanel(
+                   condition = "input.plot_choice == 'adt_icu'",
+                 plotOutput("adt_icu")),
+                 
+                 conditionalPanel(
+                   condition = "input.plot_choice == 'vitals_line_plot'",
+                 plotOutput("vitals_line_plot"))
                )
              )
     )
@@ -183,6 +192,7 @@ server <- function(input, output) {
       theme_light() +
       theme(legend.position = "bottom", legend.box = "vertical")
   })
+  
   output$vitals_line_plot <- renderPlot({
     req(input$PatientID)
     
@@ -193,8 +203,6 @@ server <- function(input, output) {
       filter(itemid %in% c(220045, 220179, 
                            220180, 220210, 
                            223761)) |>
-      filter(subject_id == patient_id) |>
-      
       select(-c(hadm_id, caregiver_id, storetime, warning)) |>
       collect() |>
       left_join(items, by = c("itemid" = "itemid")) 
@@ -205,7 +213,6 @@ server <- function(input, output) {
                color = abbreviation)) +
       geom_line() +
       geom_point() +
-      
       facet_grid(abbreviation ~ stay_id, scales = "free") +
       labs(title = paste("Patient", 
                          patient_id, 
@@ -213,10 +220,8 @@ server <- function(input, output) {
            x = "",
            y = "") +
       theme_light(base_size = 9) +
-      
       theme(legend.position = "none") +
       guides(fill = 'none') +
-      
       scale_x_datetime(
         guide = guide_axis(n.dodge = 2))
   })
