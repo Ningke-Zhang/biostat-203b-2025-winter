@@ -44,7 +44,7 @@ items <- tbl(con_bq, "d_items") |>
                              "Temperature F")) |>
   collect()
 
-#define var group
+#Define var group
 variable_groups <- list(
   Demo = c("first_careunit", "admission_type", "admission_location", 
            "discharge_location", "gender", "race", "intime_age", 
@@ -88,6 +88,7 @@ variable_display_names <- c(
 ui <- fluidPage(
   theme = shinytheme("superhero"),
   titlePanel("MIMIC-IV ICU Cohort"),
+  
   #first tab
   tabsetPanel(
     tabPanel("Patients' Summary",
@@ -107,6 +108,7 @@ ui <- fluidPage(
                )
              )
     ),
+    
     #second tab
     tabPanel("Patient's ADT and ICU stay information",
              sidebarLayout(
@@ -114,7 +116,7 @@ ui <- fluidPage(
                  selectInput("PatientID", "Patient ID", choices = patient_id),
                  radioButtons("plot_choice", "Select Plot to Display:",
                               choices = c("ADT/ICU Timeline" = "adt_icu",
-                                          "Vitals Over Time" = "vitals_line_plot"),
+                                      "Vitals Over Time" = "vitals_line_plot"),
                               selected = "adt_icu")
                ),
                mainPanel(
@@ -150,7 +152,8 @@ server <- function(input, output, session) {
     if (!input$Variable %in% names(mimic_icu_cohort)) return(NULL)  
     data_column <- mimic_icu_cohort[[input$Variable]]
     if (is.numeric(data_column)) {
-      list(min = min(data_column, na.rm = TRUE), max = max(data_column, na.rm = TRUE))
+      list(min = min(data_column, na.rm = TRUE), 
+           max = max(data_column, na.rm = TRUE))
     } else {
       return(NULL)
     }
@@ -183,12 +186,14 @@ server <- function(input, output, session) {
     data <- filtered_data()
     
     if (input$VariableGroup %in% c("lab", "vital")) {
-      selected_data <- data |> select(any_of(variable_groups[[input$VariableGroup]]))
+      selected_data <- data |> select(any_of(
+        variable_groups[[input$VariableGroup]]))
       if (ncol(selected_data) == 0) {
         return(NULL)
       }
       selected_data |>  
-        pivot_longer(cols = everything(), names_to = "variable", values_to = "value") |>  
+        pivot_longer(cols = everything(), names_to = "variable", 
+                     values_to = "value") |>  
         ggplot(aes(x = value, y = variable)) +  
         geom_boxplot(notch = TRUE, outlier.shape = 16) +  
         theme_minimal() +
@@ -299,3 +304,4 @@ server <- function(input, output, session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
