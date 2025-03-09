@@ -11,12 +11,9 @@ mimic_icu_cohort <- readRDS("mimic_icu_cohort.rds") |>
          gender = as.factor(gender)) |>
   mutate(intime_age = anchor_age + year(intime) - anchor_year)
 
-
 # Establish BigQuery connection
 satoken <- "biostat-203b-2025-winter-4e58ec6e5579.json"
-# BigQuery authentication using service account
 bq_auth(path = satoken)
-# connect to the BigQuery database `biostat-203b-2025-mimiciv_3_1`
 con_bq <- dbConnect(
   bigrquery::bigquery(),
   project = "biostat-203b-2025-winter",
@@ -24,15 +21,14 @@ con_bq <- dbConnect(
   billing = "biostat-203b-2025-winter"
 )
 
-
 # Load required tables
-sid_adt <- tbl(con_bq, "transfers")
-sid_lab <- tbl(con_bq, "labevents")
+transfers <- tbl(con_bq, "transfers")
+labevents <- tbl(con_bq, "labevents")
 d_icd_procedures <- tbl(con_bq, "d_icd_procedures")
-sid_proc <- tbl(con_bq, "procedures_icd") |>
+proc <- tbl(con_bq, "procedures_icd") |>
   left_join(d_icd_procedures, by = c("icd_code", "icd_version"))
 d_icd_diagnoses <- tbl(con_bq, "d_icd_diagnoses")
-sid_diag <- tbl(con_bq, "diagnoses_icd") |>
+diag <- tbl(con_bq, "diagnoses_icd") |>
   left_join(d_icd_diagnoses, by = c("icd_code", "icd_version"))
 chartevents <- tbl(con_bq, "chartevents")
 
@@ -47,40 +43,69 @@ items <- tbl(con_bq, "d_items") |>
                              "NBPs", "RR", 
                              "Temperature F")) |>
   collect()
+#define var group
+variable_groups <- list(
+  Demo = c("first_careunit", "admission_type", "admission_location", 
+           "discharge_location", "gender", "race", "intime_age", 
+           "anchor_year_group", "marital_status", "language", "insurance"),
+  Vital = c("heart_rate", 
+            "non_invasive_blood_pressure_systolic", 
+            "non_invasive_blood_pressure_diastolic", 
+            "respiratory_rate", 
+            "temperature_fahrenheit"),
+  Lab = c("creatinine", "potassium", "sodium", "chloride", "bicarbonate",
+          "hematocrit", "wbc", "glucose")
+)
+variable_display_names <- c(
+  first_careunit = "First Care Unit",
+  admission_type = "Admission Type",
+  admission_location = "Admission Location",
+  discharge_location = "Discharge Location",
+  gender = "Gender",
+  race = "Race",
+  intime_age = "Age at Admission",
+  anchor_year_group = "Age Group",
+  marital_status = "Marital Status",
+  language = "Language",
+  insurance = "Insurance",
+  heart_rate = "Heart Rate",
+  non_invasive_blood_pressure_systolic = "Systolic Blood Pressure",
+  non_invasive_blood_pressure_diastolic = "Diastolic Blood Pressure",
+  respiratory_rate = "Respiratory Rate",
+  temperature_fahrenheit = "Temperature (Fahrenheit)",
+  creatinine = "Creatinine",
+  potassium = "Potassium",
+  sodium = "Sodium",
+  chloride = "Chloride",
+  bicarbonate = "Bicarbonate",
+  hematocrit = "Hematocrit",
+  wbc = "White Blood Cell Count",
+  glucose = "Glucose"
+)
 
 # Define UI
 ui <- fluidPage(
   theme = shinytheme("superhero"),
   titlePanel("MIMIC-IV ICU Cohort"),
-  
   #first tab
   tabsetPanel(
     tabPanel("Patients' Summary",
              sidebarLayout(
                sidebarPanel(
-                 selectInput("Variable", "Select Variable to Explore",
-                             choices = c(
-                               "First care unit" = "first_careunit",
-                               "Admission type" = "admission_type",
-                               "Admission location" = "admission_location",
-                               "Discharge location" = "discharge_location",
-                               "Gender" = "gender",
-                               "Race" = "race",
-                               "Age" = "intime_age",
-                               "Age group" = "anchor_year_group",
-                               "Martial status" = "marital_status",
-                               "Language" = "language",
-                               "Insurance" = "insurance",
-                               "Lab Events" = "labevents",
-                               "Vitals" = "chartevents"))
+                 selectInput("VariableGroup", "Variable Group",
+                             choices = c("Demo", "Vital", "Lab")),
+                 
+                 uiOutput("variable_selector"),
+                 
+                 uiOutput("dynamic_slider")
                ),
+               
                mainPanel(
                  plotOutput("cohort_plot"),
                  verbatimTextOutput("summary_output")
                )
              )
     ),
-    
     #second tab
     tabPanel("Patient's ADT and ICU stay information",
              sidebarLayout(
@@ -88,17 +113,17 @@ ui <- fluidPage(
                  selectInput("PatientID", "Patient ID", choices = patient_id),
                  radioButtons("plot_choice", "Select Plot to Display:",
                               choices = c("ADT/ICU Timeline" = "adt_icu",
-                                      "Vitals Over Time" = "vitals_line_plot"),
+                                          "Vitals Over Time" = "vitals_line_plot"),
                               selected = "adt_icu")
                ),
                mainPanel(
                  conditionalPanel(
                    condition = "input.plot_choice == 'adt_icu'",
-                 plotOutput("adt_icu")),
+                   plotOutput("adt_icu")),
                  
                  conditionalPanel(
                    condition = "input.plot_choice == 'vitals_line_plot'",
-                 plotOutput("vitals_line_plot"))
+                   plotOutput("vitals_line_plot"))
                )
              )
     )
@@ -106,69 +131,82 @@ ui <- fluidPage(
 )
 
 # Define server logic
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   #first tab
+  output$variable_selector <- renderUI({
+    req(input$VariableGroup)
+    vars <- variable_groups[[input$VariableGroup]]
+    if (length(vars) == 0) return(NULL)
+    default_var <- vars[1]
+    selectInput("Variable", "Variable", 
+                choices = setNames(vars, variable_display_names[vars]), 
+                selected = default_var)
+  })
+  
+  variable_range <- reactive({
+    req(input$Variable)  
+    if (!input$Variable %in% names(mimic_icu_cohort)) return(NULL)  
+    data_column <- mimic_icu_cohort[[input$Variable]]
+    if (is.numeric(data_column)) {
+      list(min = min(data_column, na.rm = TRUE), max = max(data_column, na.rm = TRUE))
+    } else {
+      return(NULL)
+    }
+  })
+  
+  output$dynamic_slider <- renderUI({
+    req(input$Variable, variable_range())  
+    if (is.numeric(mimic_icu_cohort[[input$Variable]])) {
+      sliderInput("value_range", 
+                  label = paste("Select Range for", input$Variable), 
+                  min = variable_range()$min, 
+                  max = variable_range()$max, 
+                  value = c(variable_range()$min, variable_range()$max), 
+                  step = 1)
+    } else {
+      return(NULL)
+    }
+  })
+  
+  filtered_data <- reactive({
+    data <- mimic_icu_cohort
+    if (is.numeric(data[[input$Variable]])) {
+      data <- data |> filter(.data[[input$Variable]] >= input$value_range[1] & 
+                                .data[[input$Variable]] <= input$value_range[2])
+    }
+    return(data)
+  })
+  
   output$cohort_plot <- renderPlot({
-    variable <- input$Variable
+    data <- filtered_data()
     
-    if(variable %in% c("labevents", "chartevents")) {
-      data <- if(variable == "labevents") {
-        mimic_icu_cohort |>
-          select(any_of(c("creatinine", 
-                          "potassium", 
-                          "sodium", 
-                          "chloride", 
-                          "bicarbonate", 
-                          "hematocrit", 
-                          "wbc", 
-                          "glucose")))
-      } else {
-        mimic_icu_cohort |>
-          select(any_of(c("respiratory rate", "heart rate", 
-                          "non invasive blood pressure systolic", 
-                          "non invasive blood pressure diastolic", 
-                          "temperature fahrenheit")))
-      }
-      if (nrow(data) == 0) {
-        print("Data is empty!")
+    if (input$VariableGroup %in% c("lab", "vital")) {
+      selected_data <- data |> select(any_of(variable_groups[[input$VariableGroup]]))
+      if (ncol(selected_data) == 0) {
         return(NULL)
       }
-      data |>  
-        pivot_longer(cols = everything(), names_to = "variable", 
-                     values_to = "value") |>  
+      selected_data |>  
+        pivot_longer(cols = everything(), names_to = "variable", values_to = "value") |>  
         ggplot(aes(x = value, y = variable)) +  
         geom_boxplot(notch = TRUE, outlier.shape = 16) +  
         theme_minimal() +
-        labs(title = paste("Distribution of", variable),
+        labs(title = paste("Distribution of", input$Variable),
              x = "Measurement Value", y = "Variable")
+      
     } else {
-      mimic_icu_cohort |>  
-        count(!!sym(variable)) |>  
-        ggplot(aes_string(x = variable, y = "n")) +  
+      data |>  
+        count(!!sym(input$Variable)) |>  
+        ggplot(aes_string(x = input$Variable, y = "n")) +  
         geom_bar(stat = "identity", fill = "steelblue", color = "black") +  
         theme_minimal() +
-        labs(title = paste("Distribution of", variable),
+        labs(title = paste("Distribution of", input$Variable),
              x = "Category", y = "Count")
     }
   })
   
-  # generate numerical summary
   output$summary_output <- renderPrint({
-    variable <- input$Variable
-    
-    if(variable %in% c("labevents", "chartevents")) {
-      summary(mimic_icu_cohort |> 
-                select(any_of(c("potassium", "sodium", "glucose", 
-                                "creatinine", "bicarbonate", "chloride", 
-                                "respiratory rate", "heart rate", 
-                                "non invasive blood pressure systolic", 
-                                "non invasive blood pressure diastolic", 
-                                "temperature fahrenheit"))))
-    } else {
-      summary(mimic_icu_cohort |> 
-                select(any_of(variable)))
-    }
+    summary(filtered_data() |> select(any_of(input$Variable)))
   })
   
   #second tab
@@ -176,31 +214,31 @@ server <- function(input, output) {
     req(input$PatientID)
     sid <- as.numeric(input$PatientID)
     list(
-      sid_adt = sid_adt |> filter(subject_id == sid) |> collect(),
-      sid_lab = sid_lab |> filter(subject_id == sid) |> collect(),
-      sid_proc = sid_proc |> filter(subject_id == sid) |> collect(),
-      sid_diag = sid_diag |> filter(subject_id == sid) |> collect()
+      transfers = transfers |> filter(subject_id == sid) |> collect(),
+      labevents = labevents |> filter(subject_id == sid) |> collect(),
+      proc = proc |> filter(subject_id == sid) |> collect(),
+      diag = diag |> filter(subject_id == sid) |> collect()
     )
   })
   
   output$adt_icu <- renderPlot({
     h3_list <- reactiveData()
-    sid_adt <- h3_list$sid_adt
-    sid_lab <- h3_list$sid_lab
-    sid_proc <- h3_list$sid_proc
-    sid_diag <- h3_list$sid_diag
+    transfers <- h3_list$transfers
+    labevents <- h3_list$labevents
+    proc <- h3_list$proc
+    diag <- h3_list$diag
     
     patient_info <- mimic_icu_cohort |> filter(subject_id == input$PatientID)
     
     ggplot() +
-      geom_segment(data = sid_adt |> filter(eventtype != "discharge"),
+      geom_segment(data = transfers |> filter(eventtype != "discharge"),
                    aes(x = intime, xend = outtime, y = "ADT", yend = "ADT", 
                        color = careunit, 
                        linewidth = str_detect(careunit, "(ICU|CCU)")),
-      show.legend = c(linewidth = FALSE)) +
-      geom_point(data = sid_lab |> distinct(charttime, .keep_all = TRUE),
+                   show.legend = c(linewidth = FALSE)) +
+      geom_point(data = labevents |> distinct(charttime, .keep_all = TRUE),
                  aes(x = charttime, y = "Lab"), shape = '+', size = 5) +
-      geom_jitter(data = sid_proc, aes(
+      geom_jitter(data = proc, aes(
         x = chartdate + hours(12), y = "Procedure", 
         shape = str_sub(long_title, 1, 25)), 
         size = 3, height = 0) +
@@ -208,7 +246,7 @@ server <- function(input, output) {
         title = paste("Patient", input$PatientID, ",", 
                       patient_info$gender, ",", 
                       patient_info$anchor_age, "years old,", patient_info$race),
-        subtitle = str_c(str_to_lower(head(unique(sid_diag$long_title), 3)), 
+        subtitle = str_c(str_to_lower(head(unique(diag$long_title), 3)), 
                          collapse = "\n"),
         x = "Calendar Time",
         y = NULL
@@ -258,7 +296,5 @@ server <- function(input, output) {
   })
 }
 
-
 # Run the application 
 shinyApp(ui = ui, server = server)
-  

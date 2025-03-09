@@ -199,7 +199,7 @@ mimic_icu_cohort <- mimic_icu_cohort |>
                                   other_level = "Other"),
          admission_type = fct_lump_n(admission_type, n = 4, 
                                    other_level = "Other"),
-         admission_location = fct_lump_n(admission_location, n = 4, 
+         admission_location = fct_lump_n(admission_location, n = 3, 
                                        other_level = "Other"),
          discharge_location = fct_lump(discharge_location, n = 4, 
                                        other_level = "Other"),
