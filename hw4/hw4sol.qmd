@@ -3,14 +3,7 @@ title: "Biostat 203B Homework 4"
 subtitle: "Due Mar 9 @ 11:59PM"
 author: "Ningke Zhang 705834790"
 format:
-  html:
-    theme: cosmo
-    embed-resources: true
-    number-sections: false
-    toc: true
-    toc-depth: 4
-    toc-location: left
-    code-fold: false
+  pdf: default
 ---
 
 Display machine information:

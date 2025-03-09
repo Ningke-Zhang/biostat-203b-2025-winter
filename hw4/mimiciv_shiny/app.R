@@ -61,7 +61,6 @@ ui <- fluidPage(
                  selectInput("Variable", "Select Variable to Explore",
                              choices = c(
                                "First care unit" = "first_careunit",
-                               "Last care unit" = "last_careunit",
                                "Admission type" = "admission_type",
                                "Admission location" = "admission_location",
                                "Discharge location" = "discharge_location",
@@ -73,7 +72,7 @@ ui <- fluidPage(
                                "Language" = "language",
                                "Insurance" = "insurance",
                                "Lab Events" = "labevents",
-                               "Chart Events" = "chartevents"))
+                               "Vitals" = "chartevents"))
                ),
                mainPanel(
                  plotOutput("cohort_plot"),
@@ -116,31 +115,41 @@ server <- function(input, output) {
     if(variable %in% c("labevents", "chartevents")) {
       data <- if(variable == "labevents") {
         mimic_icu_cohort |>
-          select(
-            potassium, sodium, glucose, creatinine, bicarbonate, chloride) |>
-          pivot_longer(
-            cols = everything(), names_to = "variable", values_to = "value")
+          select(any_of(c("creatinine", 
+                          "potassium", 
+                          "sodium", 
+                          "chloride", 
+                          "bicarbonate", 
+                          "hematocrit", 
+                          "wbc", 
+                          "glucose")))
       } else {
         mimic_icu_cohort |>
-          select(`respiratory rate`, `heart rate`, 
-                 `non invasive blood pressure systolic`, 
-                 `non invasive blood pressure diastolic`, 
-                 `temperature fahrenheit`) |>
-          pivot_longer(cols = everything(), 
-                       names_to = "variable", values_to = "value")
+          select(any_of(c("respiratory rate", "heart rate", 
+                          "non invasive blood pressure systolic", 
+                          "non invasive blood pressure diastolic", 
+                          "temperature fahrenheit")))
       }
-      
-      data |>
-        ggplot(aes(x = value, y = variable)) +
-        geom_boxplot(notch = TRUE, 
-                     outlier.shape = ifelse(input$remove, NA, 16)) +
-        theme_minimal()
+      if (nrow(data) == 0) {
+        print("Data is empty!")
+        return(NULL)
+      }
+      data |>  
+        pivot_longer(cols = everything(), names_to = "variable", 
+                     values_to = "value") |>  
+        ggplot(aes(x = value, y = variable)) +  
+        geom_boxplot(notch = TRUE, outlier.shape = 16) +  
+        theme_minimal() +
+        labs(title = paste("Distribution of", variable),
+             x = "Measurement Value", y = "Variable")
     } else {
-      mimic_icu_cohort |>
-        count(!!sym(variable)) |>
-        ggplot(aes_string(x = variable, y = "n")) +
-        geom_bar(stat = "identity") +
-        theme_minimal()
+      mimic_icu_cohort |>  
+        count(!!sym(variable)) |>  
+        ggplot(aes_string(x = variable, y = "n")) +  
+        geom_bar(stat = "identity", fill = "steelblue", color = "black") +  
+        theme_minimal() +
+        labs(title = paste("Distribution of", variable),
+             x = "Category", y = "Count")
     }
   })
   
