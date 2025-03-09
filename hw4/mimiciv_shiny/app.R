@@ -43,6 +43,7 @@ items <- tbl(con_bq, "d_items") |>
                              "NBPs", "RR", 
                              "Temperature F")) |>
   collect()
+
 #define var group
 variable_groups <- list(
   Demo = c("first_careunit", "admission_type", "admission_location", 
