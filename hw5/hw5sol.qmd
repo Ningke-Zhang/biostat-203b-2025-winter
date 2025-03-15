@@ -27,7 +27,7 @@ library(tidymodels)
 
 ```{r}
 # read data
-mimiciv_icu_cohort <- readRDS("/Users/ningkezhang/Downloads/203b-hw-revised/hw4/mimiciv_shiny/mimic_icu_cohort.rds") |>
+mimiciv_icu_cohort <- readRDS("/Users/ningkezhang/Downloads/203b-hw-revised/hw4/mimiciv_shiny/mimic_icu_cohort.rds") |> #as Bowen mentioned, no need to copy rds in hw5, so this line have to exceed 80.
   select(-c(intime, 
             outtime, 
             admittime,
@@ -63,6 +63,10 @@ data_split <- initial_split(
   strata = "los_long", 
   prop = 0.5
   )
+
+# assign data
+icu_other <- training(data_split)
+icu_test <- testing(data_split)
 ```
 
 3. Train and tune the models using the training set.
