@@ -18,7 +18,36 @@ format:
 Using the ICU cohort `mimiciv_icu_cohort.rds` you built in Homework 4, develop at least three machine learning approaches (logistic regression with enet regularization, random forest, boosting, SVM, MLP, etc) plus a model stacking approach for predicting whether a patient's ICU stay will be longer than 2 days. You should use the `los_long` variable as the outcome. You algorithms can use patient demographic information (gender, age at ICU `intime`, marital status, race), ICU admission information (first care unit), the last lab measurements before the ICU stay, and first vital measurements during ICU stay as features. You are welcome to use any feature engineering techniques you think are appropriate; but make sure to not use features that are not available at an ICU stay's `intime`. For instance, `last_careunit` cannot be used in your algorithms. 
 
 1. Data preprocessing and feature engineering.
+```{r}
+# load libraries
+library(gtsummary)
+library(tidyverse)
+library(tidymodels)
+```
 
+```{r}
+# read data
+mimiciv_icu_cohort <- readRDS("/Users/ningkezhang/Downloads/203b-hw-revised/hw4/mimiciv_shiny/mimic_icu_cohort.rds") |>
+  select(-c(intime, 
+            outtime, 
+            admittime,
+            dischtime,
+            deathtime,
+            admit_provider_id,
+            edregtime,
+            edouttime,
+            anchor_age,
+            anchor_year,
+            anchor_year_group,
+            last_careunit,
+            discharge_location,
+            hospital_expire_flag,
+            dod,
+            los)
+         ) |>
+  mutate(los_long = as.factor(los_long)) |>
+  print(width = Inf)
+```
 2. Partition data into 50% training set and 50% test set. Stratify partitioning according to `los_long`. For grading purpose, sort the data by `subject_id`, `hadm_id`, and `stay_id` and use the seed `203` for the initial data split. Below is the sample code.
 ```{r}
 #| eval: false
