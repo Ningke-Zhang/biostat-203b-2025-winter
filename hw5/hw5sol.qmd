@@ -1,7 +1,7 @@
 ---
 title: "Biostat 203B Homework 5"
 subtitle: Due Mar 20 @ 11:59PM
-author: "Your Name and UID"
+author: "Ningke Zhang 705834790"
 format:
   html:
     theme: cosmo
@@ -57,12 +57,9 @@ set.seed(203)
 mimiciv_icu_cohort <- mimiciv_icu_cohort |>
   arrange(subject_id, hadm_id, stay_id)
 
-data_split <- initial_split(
-  mimiciv_icu_cohort, 
-  # stratify by los_long
-  strata = "los_long", 
-  prop = 0.5
-  )
+data_split <- initial_split(mimiciv_icu_cohort, 
+                            strata = "los_long", 
+                            prop = 0.5)
 
 # assign data
 icu_other <- training(data_split)
