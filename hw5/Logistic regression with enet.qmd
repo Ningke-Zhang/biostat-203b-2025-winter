@@ -117,7 +117,8 @@ logit_fit |>
   collect_metrics() |>
   filter(.metric == "roc_auc") |>
   print(width = Inf) |> 
-  ggplot(mapping = aes(x = penalty, y = mean, color = factor(mixture), group = factor(mixture))) +  
+  ggplot(mapping = aes(x = penalty, y = mean, color = factor(mixture), 
+                       group = factor(mixture))) +  
   geom_point() +
   geom_line() +
   labs(x = "Penalty (λ)", y = "Cross-Validation AUC", color = "Mixture (α)") +

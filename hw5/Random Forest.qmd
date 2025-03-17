@@ -128,7 +128,8 @@ rf_fit |>
     y = "Cross-Validation AUC",
     color = "mtry (Number of Variables)"
   ) +
-  scale_x_continuous(breaks = seq(min(rf_grid$trees), max(rf_grid$trees), by = 50)) +  # 让 x 轴更清晰
+  scale_x_continuous(breaks = seq(min(rf_grid$trees), 
+                                  max(rf_grid$trees), by = 50)) +
   theme_minimal()
 ```
 6. Model evaluation
