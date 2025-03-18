@@ -128,26 +128,20 @@ logit_fit |>
 6. Model evaluation
 ```{r}
 # select the best model
-best_logit <- logit_fit |>
-  select_best(metric = "roc_auc")
-
+best_logit <- logit_fit |> select_best(metric = "roc_auc")
 print(best_logit)
 
-# finalize the workflow
+# finalize the workflow/fit
 final_logit_wf <- finalize_workflow(logit_wf, best_logit)
 
-final_logit_fit <- 
-  final_logit_wf |>
-  last_fit(data_split)
+final_logit_fit <- final_logit_wf |> last_fit(data_split)
 
-final_logit_fit |> 
-  collect_metrics()
+saveRDS(final_logit_fit, "final_fit_logistic_lastfit.rds")
 
-final_logit_fit <- extract_workflow(final_logit_fit)
+final_logit_model <- final_logit_fit |> extract_workflow() |> 
+  extract_fit_parsnip()
 
-final_logit_fit |>
-  extract_fit_parsnip() |>
-  vip()
+final_logit_model |> vip()
 
-saveRDS(final_logit_fit, "final_fit_logistic.rds")
+saveRDS(final_logit_model, "final_fit_logistic.rds")
 ```

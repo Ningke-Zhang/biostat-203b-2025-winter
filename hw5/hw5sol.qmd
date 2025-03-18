@@ -20,9 +20,17 @@ Using the ICU cohort `mimiciv_icu_cohort.rds` you built in Homework 4, develop a
 1. Data preprocessing and feature engineering.
 ```{r}
 # load libraries
-library(gtsummary)
-library(tidyverse)
+library(stacks)
 library(tidymodels)
+library(dplyr)
+library(recipes)
+library(workflows)
+library(tune)
+library(glmnet)
+library(vip)
+library(ranger)
+library(future)
+library(xgboost)
 ```
 
 ```{r}
@@ -53,19 +61,157 @@ mimiciv_icu_cohort <- readRDS("/Users/ningkezhang/Downloads/203b-hw-revised/hw4/
 #| eval: false
 set.seed(203)
 
-# sort
 mimiciv_icu_cohort <- mimiciv_icu_cohort |>
-  arrange(subject_id, hadm_id, stay_id)
+  arrange(subject_id, hadm_id, stay_id) |>
+  select(-c(subject_id, hadm_id, stay_id))
+mimiciv_icu_cohort <- mimiciv_icu_cohort |> drop_na()
 
 data_split <- initial_split(mimiciv_icu_cohort, 
                             strata = "los_long", 
                             prop = 0.5)
 
-# assign data
 icu_other <- training(data_split)
 icu_test <- testing(data_split)
 ```
 
 3. Train and tune the models using the training set.
+* For logistic regression with elasticnet regularization, has 0.574 accuracy and 0.605 AUC in train data, the most important features are non invasive blood pressure systolic, frist care unit, and heart rate.
+* For random forest, has 0.596 accuracy and 0.635 AUC in train data, the most important features are creatinine, intime age, and non invasive blood pressure systolic.
+* For boosting, has 0.601 accuracy and 0.638 AUC in train data, the most important features are non invasive blood pressure systolic, intime age, and hematocrit.
+```{r}
+# read models
+logit_mod <- readRDS("final_fit_logistic_lastfit.rds")
+rf_mod <- readRDS("final_fit_rf_lastfit.rds")
+gb_mod <- readRDS("final_fit_gb_lastfit.rds")
 
+logit_metrics <- logit_mod |> collect_metrics() |> 
+  filter(.metric %in% c("roc_auc", "accuracy"))
+rf_metrics <- rf_mod |> collect_metrics() |> 
+  filter(.metric %in% c("roc_auc", "accuracy"))
+gb_metrics <- gb_mod |> collect_metrics() |> 
+  filter(.metric %in% c("roc_auc", "accuracy"))
+
+print(logit_metrics)
+print(rf_metrics)
+print(gb_metrics)
+```
+
+```{r}
+### Stacking model
+recipe <- 
+  recipe(los_long ~ ., data = icu_other) |>
+  step_impute_median(all_numeric_predictors()) |>  
+  step_impute_mode(all_nominal_predictors()) |> 
+  step_novel(all_nominal_predictors()) |>  
+  step_unknown(all_nominal_predictors()) |>  
+  step_dummy(all_nominal_predictors()) |>  
+  step_nzv(all_predictors()) |>  
+  step_normalize(all_numeric_predictors(), -all_outcomes())  
+
+folds <- vfold_cv(icu_other, v = 2, strata = los_long)
+control_stack <- control_grid(save_pred = TRUE, save_workflow = FALSE)
+
+#Logistic regression with elasticnet regularization
+logit_mod <- logistic_reg(penalty = tune(), mixture = tune()) |> 
+  set_engine("glmnet", standardize = FALSE) |>
+  set_mode("classification")
+
+logit_wf <- workflow() |>
+  add_recipe(recipe) |>
+  add_model(logit_mod)
+
+param_grid <- grid_regular(
+  penalty(range = c(-6, 2)),
+  mixture(range = c(0, 1)),
+  levels = 5
+)
+
+logit_stacked <- logit_wf |>
+  tune_grid(
+    resamples = folds,
+    grid = param_grid,
+    metrics = metric_set(roc_auc, accuracy),
+    control = control_grid(save_pred = TRUE, verbose = TRUE)
+  )
+logit_stacked
+
+#Random Forest
+rf_mod <- 
+  rand_forest(
+    mode = "classification",
+    mtry = tune(),
+    trees = tune(),
+    min_n = tune()) |> 
+  set_engine("ranger", importance = "permutation")
+
+rf_wf <- workflow() |>
+  add_recipe(recipe) |>
+  add_model(rf_mod)
+
+rf_grid <- grid_regular(
+  mtry(range = c(2, 6)),    
+  trees(range = c(150, 200)), 
+  min_n(range = c(5, 10)),
+  levels = 3
+)
+
+rf_stacked <- rf_wf |>
+  tune_grid(
+    resamples = folds,
+    grid = rf_grid,
+    metrics = metric_set(roc_auc, accuracy),  
+    control = control_stack 
+  )
+rf_stacked
+
+#Boosting
+gb_mod <-
+  boost_tree(
+    mode = "classification",
+    trees = 600, 
+    tree_depth = tune(),
+    learn_rate = tune()
+  ) |> 
+  set_engine("xgboost")
+
+gb_wf <- workflow() |>
+  add_recipe(gb_recipe) |>
+  add_model(gb_mod)
+
+param_grid <- grid_regular(
+  tree_depth(range = c(3L, 8L)),  
+  learn_rate(range = c(-3, -0.5), trans = log10_trans()),
+  levels = 5
+)
+
+gb_stacked <- gb_wf |>
+  tune_grid(
+    resamples = folds,
+    grid = param_grid,
+    metrics = metric_set(roc_auc, accuracy),
+    control = control_grid(verbose = TRUE, save_pred = TRUE)
+  )
+gb_stacked 
+```
+
+
+
+
+
+```{r}
+stacked_model <- stacks() |>
+  add_candidates(logit_stacked |> extract_workflow()) |>
+  add_candidates(rf_stacked |> extract_workflow()) |>
+  add_candidates(gb_stacked |> extract_workflow())
+
+stacked_model <- stacked_model |> 
+  blend_predictions(metric = metric_set(roc_auc, accuracy)) |>
+  fit_members()
+
+stacked_results <- stacked_model |> predict(new_data = icu_test, type = "prob")
+
+stacked_results |> 
+  bind_cols(testing_data) |>
+  roc_auc(truth = los_long, .pred_1)
+```
 4. Compare model classification performance on the test set. Report both the area under ROC curve and accuracy for each machine learning algorithm and the model stacking. Interpret the results. What are the most important features in predicting long ICU stays? How do the models compare in terms of performance and interpretability?

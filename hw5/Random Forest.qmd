@@ -135,26 +135,19 @@ rf_fit |>
 6. Model evaluation
 ```{r}
 # select the best model
-best_rf <- rf_fit |>
-  select_best(metric = "roc_auc")
-
+best_rf <- rf_fit |> select_best(metric = "roc_auc")
 print(best_rf)
 
-# finalize the workflow
+# finalize the workflow/fit
 final_rf_wf <- finalize_workflow(rf_wf, best_rf)
 
-final_rf_fit <- 
-  final_rf_wf |>
-  last_fit(data_split)
+final_rf_fit <- final_rf_wf |> last_fit(data_split)
 
-final_rf_fit |> 
-  collect_metrics()
+saveRDS(final_rf_fit, "final_fit_rf_lastfit.rds")
 
-final_rf_fit <- extract_workflow(final_rf_fit)
+final_rf_model <- final_rf_fit |> extract_workflow() |> extract_fit_parsnip()
 
-final_rf_fit |>
-  extract_fit_parsnip() |>
-  vip()
+final_rf_model |> vip()
 
-saveRDS(final_rf_fit, "final_fit_rf.rds")
+saveRDS(final_rf_model, "final_fit_rf.rds")
 ```

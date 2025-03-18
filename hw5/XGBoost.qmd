@@ -122,7 +122,8 @@ gb_fit
 gb_fit |>
   collect_metrics() |> 
   filter(.metric == "roc_auc") |>
-  ggplot(aes(x = learn_rate, y = mean, color = factor(tree_depth), group = factor(tree_depth))) +
+  ggplot(aes(x = learn_rate, y = mean, color = factor(tree_depth), 
+             group = factor(tree_depth))) +
   geom_point(size = 3, alpha = 0.7) + 
   geom_line(linewidth = 1) +
   labs(
@@ -137,24 +138,19 @@ gb_fit |>
 6. Model evaluation
 ```{r}
 # select the best model
-best_gb <- gb_fit |> 
-  select_best(metric = "roc_auc")
+best_gb <- gb_fit |> select_best(metric = "roc_auc")
+print(best_gb)
 
-# finalize the workflow
+# finalize the workflow/fit
 final_gb_wf <- finalize_workflow(gb_wf, best_gb)
 
-final_gb_fit <- 
-  final_gb_wf |>
-  last_fit(data_split)
+final_gb_fit <- final_gb_wf |> last_fit(data_split)
 
-final_gb_fit |> 
-  collect_metrics()
+saveRDS(final_gb_fit, "final_fit_gb_lastfit.rds")
 
-final_gb_fit <- extract_workflow(final_gb_fit)
+final_gb_model <- final_gb_fit |> extract_workflow() |> extract_fit_parsnip()
 
-final_gb_fit |>
-  extract_fit_parsnip() |>
-  vip()
+final_gb_model |> vip()
 
-saveRDS(final_gb_fit, "final_fit_gb.rds")
+saveRDS(final_gb_model, "final_fit_gb.rds")
 ```
