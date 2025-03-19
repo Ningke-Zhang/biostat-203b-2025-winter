@@ -3175,7 +3175,7 @@ Attaching package: &#39;vip&#39;</code></pre>
 <p>2.Data preprocessing and feature engineering.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># read data</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>mimiciv_icu_cohort <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;/Users/ningkezhang/Downloads/203b-hw-revised/hw4/mimiciv_shiny/mimic_icu_cohort.rds&quot;</span>) <span class="sc">|&gt;</span> <span class="co">#as Bowen mentioned, no need to copy rds in hw5, so this line have to exceed 80.</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>mimiciv_icu_cohort <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../hw4/mimiciv_shiny/mimic_icu_cohort.rds&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(intime, </span>
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>            outtime, </span>
 <span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>            admittime,</span>
@@ -3735,12 +3735,13 @@ Computational engine: glmnet </code></pre>
 <span id="cb135-3"><a href="#cb135-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect_metrics</span>() <span class="sc">|&gt;</span></span>
 <span id="cb135-4"><a href="#cb135-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(.metric <span class="sc">==</span> <span class="st">&quot;roc_auc&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb135-5"><a href="#cb135-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="at">width =</span> <span class="cn">Inf</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb135-6"><a href="#cb135-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> penalty, <span class="at">y =</span> mean, <span class="at">color =</span> <span class="fu">factor</span>(mixture), <span class="at">group =</span> <span class="fu">factor</span>(mixture))) <span class="sc">+</span>  </span>
-<span id="cb135-7"><a href="#cb135-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span></span>
-<span id="cb135-8"><a href="#cb135-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
-<span id="cb135-9"><a href="#cb135-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Penalty (λ)&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Cross-Validation AUC&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Mixture (α)&quot;</span>) <span class="sc">+</span></span>
-<span id="cb135-10"><a href="#cb135-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_log10</span>() <span class="sc">+</span></span>
-<span id="cb135-11"><a href="#cb135-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb135-6"><a href="#cb135-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> penalty, <span class="at">y =</span> mean, <span class="at">color =</span> <span class="fu">factor</span>(mixture), </span>
+<span id="cb135-7"><a href="#cb135-7" aria-hidden="true" tabindex="-1"></a>                       <span class="at">group =</span> <span class="fu">factor</span>(mixture))) <span class="sc">+</span>  </span>
+<span id="cb135-8"><a href="#cb135-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb135-9"><a href="#cb135-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb135-10"><a href="#cb135-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Penalty (λ)&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Cross-Validation AUC&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Mixture (α)&quot;</span>) <span class="sc">+</span></span>
+<span id="cb135-11"><a href="#cb135-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_log10</span>() <span class="sc">+</span></span>
+<span id="cb135-12"><a href="#cb135-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 500 × 8
       penalty mixture .metric .estimator  mean     n std_err
@@ -3782,38 +3783,25 @@ Computational engine: glmnet </code></pre>
 </ol>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb137"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb137-1"><a href="#cb137-1" aria-hidden="true" tabindex="-1"></a><span class="co"># select the best model</span></span>
-<span id="cb137-2"><a href="#cb137-2" aria-hidden="true" tabindex="-1"></a>best_logit <span class="ot">&lt;-</span> logit_fit <span class="sc">|&gt;</span></span>
-<span id="cb137-3"><a href="#cb137-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select_best</span>(<span class="at">metric =</span> <span class="st">&quot;roc_auc&quot;</span>)</span>
-<span id="cb137-4"><a href="#cb137-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb137-5"><a href="#cb137-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(best_logit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb137-2"><a href="#cb137-2" aria-hidden="true" tabindex="-1"></a>best_logit <span class="ot">&lt;-</span> logit_fit <span class="sc">|&gt;</span> <span class="fu">select_best</span>(<span class="at">metric =</span> <span class="st">&quot;roc_auc&quot;</span>)</span>
+<span id="cb137-3"><a href="#cb137-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(best_logit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 3
    penalty mixture .config               
      &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;                 
 1 0.000811       1 Preprocessor1_Model437</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb139"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb139-1"><a href="#cb139-1" aria-hidden="true" tabindex="-1"></a><span class="co"># finalize the workflow</span></span>
+<div class="sourceCode cell-code" id="cb139"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb139-1"><a href="#cb139-1" aria-hidden="true" tabindex="-1"></a><span class="co"># finalize the workflow/fit</span></span>
 <span id="cb139-2"><a href="#cb139-2" aria-hidden="true" tabindex="-1"></a>final_logit_wf <span class="ot">&lt;-</span> <span class="fu">finalize_workflow</span>(logit_wf, best_logit)</span>
 <span id="cb139-3"><a href="#cb139-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb139-4"><a href="#cb139-4" aria-hidden="true" tabindex="-1"></a>final_logit_fit <span class="ot">&lt;-</span> </span>
-<span id="cb139-5"><a href="#cb139-5" aria-hidden="true" tabindex="-1"></a>  final_logit_wf <span class="sc">|&gt;</span></span>
-<span id="cb139-6"><a href="#cb139-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">last_fit</span>(data_split)</span>
+<span id="cb139-4"><a href="#cb139-4" aria-hidden="true" tabindex="-1"></a>final_logit_fit <span class="ot">&lt;-</span> final_logit_wf <span class="sc">|&gt;</span> <span class="fu">last_fit</span>(data_split)</span>
+<span id="cb139-5"><a href="#cb139-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb139-6"><a href="#cb139-6" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(final_logit_fit, <span class="st">&quot;final_fit_logistic_lastfit.rds&quot;</span>)</span>
 <span id="cb139-7"><a href="#cb139-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb139-8"><a href="#cb139-8" aria-hidden="true" tabindex="-1"></a>final_logit_fit <span class="sc">|&gt;</span> </span>
-<span id="cb139-9"><a href="#cb139-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect_metrics</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 3 × 4
-  .metric     .estimator .estimate .config             
-  &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;               
-1 accuracy    binary         0.574 Preprocessor1_Model1
-2 roc_auc     binary         0.605 Preprocessor1_Model1
-3 brier_class binary         0.242 Preprocessor1_Model1</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb141"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb141-1"><a href="#cb141-1" aria-hidden="true" tabindex="-1"></a>final_logit_fit <span class="ot">&lt;-</span> <span class="fu">extract_workflow</span>(final_logit_fit)</span>
-<span id="cb141-2"><a href="#cb141-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb141-3"><a href="#cb141-3" aria-hidden="true" tabindex="-1"></a>final_logit_fit <span class="sc">|&gt;</span></span>
-<span id="cb141-4"><a href="#cb141-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">extract_fit_parsnip</span>() <span class="sc">|&gt;</span></span>
-<span id="cb141-5"><a href="#cb141-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">vip</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb139-8"><a href="#cb139-8" aria-hidden="true" tabindex="-1"></a>final_logit_model <span class="ot">&lt;-</span> final_logit_fit <span class="sc">|&gt;</span> <span class="fu">extract_workflow</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb139-9"><a href="#cb139-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">extract_fit_parsnip</span>()</span>
+<span id="cb139-10"><a href="#cb139-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb139-11"><a href="#cb139-11" aria-hidden="true" tabindex="-1"></a>final_logit_model <span class="sc">|&gt;</span> <span class="fu">vip</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -3821,7 +3809,7 @@ Computational engine: glmnet </code></pre>
 </figure>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb142"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb142-1"><a href="#cb142-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(final_logit_fit, <span class="st">&quot;final_fit_logistic.rds&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb140"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb140-1"><a href="#cb140-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(final_logit_model, <span class="st">&quot;final_fit_logistic.rds&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 
 </main>

@@ -27,8 +27,9 @@ library(future)
 ```
 2.Data preprocessing and feature engineering.
 ```{r}
+#| eval: false
 # read data
-mimiciv_icu_cohort <- readRDS("/Users/ningkezhang/Downloads/203b-hw-revised/hw4/mimiciv_shiny/mimic_icu_cohort.rds") |> #as Bowen mentioned, no need to copy rds in hw5, so this line have to exceed 80.
+mimiciv_icu_cohort <- readRDS("../hw4/mimiciv_shiny/mimic_icu_cohort.rds") |>
   select(-c(intime, 
             outtime, 
             admittime,
@@ -51,6 +52,7 @@ mimiciv_icu_cohort <- readRDS("/Users/ningkezhang/Downloads/203b-hw-revised/hw4/
 ```
 3.Data split
 ```{r}
+#| eval: false
 set.seed(203)
 
 mimiciv_icu_cohort <- mimiciv_icu_cohort |>
@@ -67,6 +69,7 @@ icu_test <- testing(data_split)
 ```
 4.Train Random Rorest model.
 ```{r}
+#| eval: false
 #define recipe
 rf_recipe <- recipe(los_long ~ ., data = icu_other) |>
   step_impute_median(all_numeric_predictors()) |>
@@ -101,6 +104,7 @@ rf_grid <- grid_regular(
 ```
 5.Cross-validation
 ```{r}
+#| eval: false
 set.seed(203)
 
 folds <- vfold_cv(icu_other, v = 5)
@@ -134,6 +138,7 @@ rf_fit |>
 ```
 6. Model evaluation
 ```{r}
+#| eval: false
 # select the best model
 best_rf <- rf_fit |> select_best(metric = "roc_auc")
 print(best_rf)
