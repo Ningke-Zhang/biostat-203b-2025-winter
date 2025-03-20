@@ -1,0 +1,147 @@
+---
+title: "Biostat 203B Homework 5 / Logistic regression with enet"
+subtitle: Due Mar 20 @ 11:59PM
+author: "Ningke Zhang 705834790"
+format:
+  html:
+    theme: cosmo
+    embed-resources: true
+    number-sections: false
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    code-fold: false
+---
+
+1. Load libraries
+```{r}
+library(tidymodels)
+library(dplyr)
+library(recipes)
+library(workflows)
+library(tune)
+library(glmnet)
+library(vip)
+```
+2.Data preprocessing and feature engineering.
+```{r}
+# read data
+mimiciv_icu_cohort <- readRDS("../hw4/mimiciv_shiny/mimic_icu_cohort.rds") |>
+  select(-c(intime, 
+            outtime, 
+            admittime,
+            dischtime,
+            deathtime,
+            admit_provider_id,
+            edregtime,
+            edouttime,
+            anchor_age,
+            anchor_year,
+            anchor_year_group,
+            last_careunit,
+            discharge_location,
+            hospital_expire_flag,
+            dod,
+            los)
+         ) |>
+  mutate(los_long = as.factor(los_long)) |>
+  print(width = Inf)
+```
+3.Data split
+```{r}
+set.seed(203)
+
+mimiciv_icu_cohort <- mimiciv_icu_cohort |>
+  arrange(subject_id, hadm_id, stay_id) |>
+  select(-c(subject_id, hadm_id, stay_id))
+mimiciv_icu_cohort <- mimiciv_icu_cohort |> drop_na()
+
+data_split <- initial_split(mimiciv_icu_cohort, 
+                            strata = "los_long", 
+                            prop = 0.5)
+
+icu_other <- training(data_split)
+icu_test <- testing(data_split)
+```
+4.Train logistic regression with elasticnet regularization.
+```{r}
+# Define the recipe
+logit_recipe <- 
+  recipe(los_long ~ ., data = icu_other) |>
+ 
+  step_impute_median(all_numeric_predictors()) |>
+  step_impute_mode(all_nominal_predictors()) |>
+  step_unknown(all_nominal_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_nzv(all_predictors()) |>  
+  step_normalize(all_numeric_predictors(), -all_outcomes())
+
+# Define the model
+logit_mod <- logistic_reg(penalty = tune(), mixture = tune()) |> 
+  set_engine("glmnet", standardize = FALSE) |>
+  print()
+
+# Define the workflow
+logit_wf <- workflow() |>
+  add_recipe(logit_recipe) |>
+  add_model(logit_mod) |>
+  print()
+
+# Define the grid
+param_grid <- grid_regular(
+  penalty(range = range(-6, 2)),
+  mixture(range = range(0, 1)),
+  levels = c(100, 5)
+) |> 
+  print()
+```
+5.Cross-validation
+```{r}
+set.seed(203)
+
+folds <- vfold_cv(icu_other, v = 5, strata = los_long)
+
+# fit cross-validation
+logit_fit <- logit_wf |>
+  tune_grid(
+    resamples = folds,
+    grid = param_grid,
+    metrics = metric_set(roc_auc, accuracy),
+    control = control_grid(save_pred = TRUE, verbose = TRUE)
+  )
+
+logit_fit
+
+#visualize CV results
+logit_fit |>
+  collect_metrics() |>
+  filter(.metric == "roc_auc") |>
+  print(width = Inf) |> 
+  ggplot(mapping = aes(x = penalty, y = mean, color = factor(mixture), 
+                       group = factor(mixture))) +  
+  geom_point() +
+  geom_line() +
+  labs(x = "Penalty (λ)", y = "Cross-Validation AUC", color = "Mixture (α)") +
+  scale_x_log10() +
+  theme_minimal()
+```
+6. Model evaluation
+```{r}
+# select the best model
+best_logit <- logit_fit |> select_best(metric = "roc_auc")
+print(best_logit)
+
+# finalize the workflow/fit
+final_logit_wf <- finalize_workflow(logit_wf, best_logit)
+
+final_logit_fit <- final_logit_wf |> last_fit(data_split)
+
+saveRDS(final_logit_fit, "final_fit_logistic_lastfit.rds")
+
+final_logit_model <- final_logit_fit |> extract_workflow() |> 
+  extract_fit_parsnip()
+
+final_logit_model |> vip()
+
+saveRDS(final_logit_model, "final_fit_logistic.rds")
+```
