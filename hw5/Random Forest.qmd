@@ -1,5 +1,5 @@
 ---
-title: "Biostat 203B Homework 5 / Logistic regression with enet"
+title: "Biostat 203B Homework 5 / Random Forest"
 subtitle: Due Mar 20 @ 11:59PM
 author: "Ningke Zhang 705834790"
 format:
